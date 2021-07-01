@@ -1,2 +1,2 @@
 # godevman
-Unified network device management library
+Unified management library for network devices
