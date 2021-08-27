@@ -1,5 +1,7 @@
 package godevman
 
+// System
+
 // Get sysDescr
 type DevSysDescr interface {
 	SysDescr() (string, error)
@@ -30,7 +32,14 @@ type DevSysLocation interface {
 	SysLocation() (string, error)
 }
 
+// Interfaces
+
 // Get ifNumber
 type DevIfNumber interface {
 	IfNumber() (int64, error)
+}
+
+// Get ifDescr
+type DevIfDescr interface {
+	IfDescr(idx ...string) (map[string]string, error)
 }
