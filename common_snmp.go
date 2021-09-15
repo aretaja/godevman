@@ -624,7 +624,7 @@ func (sd *snmpCommon) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 			bMap := BitMap(bytes)
 
 			ports := make(map[int]*d1qVlanBrPort)
-			for p, _ := range bMap {
+			for p := range bMap {
 				ports[p] = &d1qVlanBrPort{IfIdx: ifIdx[strconv.Itoa(p)]}
 			}
 
@@ -660,7 +660,7 @@ func (sd *snmpCommon) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 		for v, bytes := range uBytes {
 			bMap := BitMap(bytes)
 
-			for p, _ := range bMap {
+			for p := range bMap {
 				out[v].Ports[p].UnTag = true
 			}
 		}
