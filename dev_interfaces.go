@@ -1,45 +1,38 @@
 package godevman
 
-// System
-
-// Get sysDescr
-type DevSysDescr interface {
-	SysDescr() (string, error)
-}
-
-// Get sysObjectID
-type DevSysObjectID interface {
-	SysObjectID() (string, error)
-}
-
-// Get sysUpTime
-type DevSysUpTime interface {
-	SysUpTime() (uint64, error)
-}
-
-// Get sysContact
-type DevSysContact interface {
-	SysContact() (string, error)
-}
-
-// Get sysName
-type DevSysName interface {
-	SysName() (string, error)
-}
-
-// Get sysLocation
-type DevSysLocation interface {
-	SysLocation() (string, error)
+// Get system info
+type DevSystem interface {
+	System(targets []string) (system, error)
 }
 
 // Interfaces
 
-// Get ifNumber
-type DevIfNumber interface {
+// Get interface info
+type DevIfInfo interface {
+	IfInfo(targets []string, idx ...string) (map[string]*ifInfo, error)
+	// Get ifNumber
 	IfNumber() (int64, error)
+	// Get interfaces stack info
+	IfStack() (ifStack, error)
 }
 
-// Get ifDescr
-type DevIfDescr interface {
-	IfDescr(idx ...string) (map[string]string, error)
+// Get inventory info
+type DevInvInfo interface {
+	InvInfo(targets []string, idx ...string) (map[string]*invInfo, error)
+	// Get interface to inventory relations
+	IfInventory() (map[int]int, error)
+}
+
+// Get dot1q vlan info
+type DevVlanInfo interface {
+	D1qVlans() (map[string]string, error)
+	// Get dot1q vlans
+	BrPort2IfIdx() (map[string]int, error)
+	// Get dot1q vlan to port relations
+	D1qVlanInfo() (map[string]*d1qVlanInfo, error)
+}
+
+// Get IP info
+type DevIpInfo interface {
+	IpInfo(targets []string, ip ...string) (map[string]*ipInfo, error)
 }

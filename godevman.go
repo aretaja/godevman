@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/aretaja/snmphelper"
 	"github.com/kr/pretty"
@@ -115,13 +116,82 @@ func NewDevice(p *Dparams) (*device, error) {
 // Morph - Type morphing according to device
 func (d *device) Morph() interface{} {
 	var res interface{} = d
-	switch {
-	case d.sysobjectid == ".1.3.6.1.4.1.14988.1":
-		md := deviceMikrotik{
-			snmpCommon{*d},
+
+	if strings.HasPrefix(d.sysobjectid, ".") {
+		switch {
+		case d.sysobjectid == ".1.3.6.1.4.1.14988.1":
+			md := deviceMikrotik{
+				snmpCommon{*d},
+			}
+			res = &md
+		default:
+			res = &snmpCommon{*d}
 		}
-		res = &md
 	}
 
 	return res
+}
+
+// Common types for unified device info
+
+// Common types for collected values
+type valString struct {
+	Value string
+	IsSet bool
+}
+
+type valI64 struct {
+	Value int64
+	IsSet bool
+}
+
+type valU64 struct {
+	Value uint64
+	IsSet bool
+}
+
+// System data
+type system struct {
+	Descr, ObjectID, Contact, Name, Location, UpTimeStr valString
+	UpTime                                              valU64
+}
+
+// Interface info
+type ifInfo struct {
+	Descr, Name, Alias, Mac, LastStr, TypeStr, AdminStr, OperStr valString
+	Type, Mtu, Admin, Oper                                       valI64
+	Speed, Last, InOctets, InUcast, InNUcast, InMcast, InBcast, InDiscards,
+	InErrors, InUnknProtos, OutOctets, OutUcast, OutNUcast, OutMast, OutBcast,
+	OutDiscards, OutErrors valU64
+}
+
+// Interface stack info
+type ifStack struct {
+	Up, Down map[int][]int
+}
+
+// Inventory info
+type invInfo struct {
+	Physical bool
+	ParentId valI64
+	Descr, Position, HwProduct, HwRev, Serial, Manufacturer, Model, SwProduct,
+	SwRev valString
+}
+
+// Dot1Q VLAN bridgeport info
+type d1qVlanBrPort struct {
+	IfIdx int
+	UnTag bool
+}
+
+// Dot1Q VLAN info (Boolean in Ports map indicates untagged vlan)
+type d1qVlanInfo struct {
+	Name  string
+	Ports map[int]*d1qVlanBrPort
+}
+
+// IP info
+type ipInfo struct {
+	IfIdx int64
+	Mask  string
 }
