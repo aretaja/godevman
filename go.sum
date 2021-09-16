@@ -1,5 +1,3 @@
-github.com/aretaja/snmphelper v1.0.0 h1:ASTMwJwPCfApR5nCp+CyLAHf7x2/XEmP3NeGBXYs3uA=
-github.com/aretaja/snmphelper v1.0.0/go.mod h1:D9kzc0Ah/EzRq1i22X5lZioFRemwKsVrxpWY0N3wUG4=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/golang/mock v1.4.4/go.mod h1:l3mdAwkq5BuhzHwde/uurv3sEJeZMXNpwsxVWU71h+4=
