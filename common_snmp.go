@@ -706,6 +706,14 @@ func (sd *snmpCommon) IpInfo(targets []string, ip ...string) (map[string]*ipInfo
 			return out, err
 		}
 
+		// Some devices prepend (0.)+ to the ip
+		if r == nil && ip != nil {
+			r, err = sd.getmulti(oid+".0", ip)
+			if err != nil {
+				return out, err
+			}
+		}
+
 		for o, d := range r {
 			switch {
 			case strings.Contains(o, ipTable+"2."):
@@ -719,4 +727,39 @@ func (sd *snmpCommon) IpInfo(targets []string, ip ...string) (map[string]*ipInfo
 	}
 
 	return out, nil
+}
+
+// Get IP Interface info
+func (sd *snmpCommon) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
+	out := make(map[string]*ipIfInfo)
+
+	ipInfo, err := sd.IpInfo([]string{"All"}, ip...)
+	if err != nil {
+		return out, err
+	}
+
+	// Get slice of ifIndexes from ipInfo and fill output map with ip info
+	ifIdxs := make([]string, 0, len(ipInfo))
+	for i, v := range ipInfo {
+		ifIdxs = append(ifIdxs, strconv.FormatInt(int64(v.IfIdx), 10))
+
+		if out[i] == nil {
+			out[i] = new(ipIfInfo)
+		}
+		out[i].ipInfo = *v
+	}
+
+	ifInfo, err := sd.IfInfo([]string{"Descr", "Alias"}, ifIdxs...)
+	if err != nil {
+		return out, err
+	}
+
+	// Fill output map with interface info
+	for i, d := range ipInfo {
+		ifIdxStr := strconv.FormatInt(int64(d.IfIdx), 10)
+		out[i].Descr = ifInfo[ifIdxStr].Descr.Value
+		out[i].Alias = ifInfo[ifIdxStr].Alias.Value
+	}
+
+	return out, err
 }
