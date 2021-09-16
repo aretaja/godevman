@@ -195,3 +195,9 @@ type ipInfo struct {
 	IfIdx int64
 	Mask  string
 }
+
+// IP Interface info
+type ipIfInfo struct {
+	ipInfo
+	Descr, Alias string
+}

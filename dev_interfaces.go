@@ -35,4 +35,5 @@ type DevVlanInfo interface {
 // Get IP info
 type DevIpInfo interface {
 	IpInfo(targets []string, ip ...string) (map[string]*ipInfo, error)
+	IpIfInfo(ip ...string) (map[string]*ipIfInfo, error)
 }
