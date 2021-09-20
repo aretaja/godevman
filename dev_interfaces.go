@@ -37,3 +37,15 @@ type DevIpInfo interface {
 	IpInfo(targets []string, ip ...string) (map[string]*ipInfo, error)
 	IpIfInfo(ip ...string) (map[string]*ipIfInfo, error)
 }
+
+// Get IPv6 info
+type DevIp6Info interface {
+	Ip6IfDescr(idx ...string) (map[string]string, error)
+}
+
+// Get OSPF info
+type DevOspfInfo interface {
+	OspfAreaRouters() (map[string][]string, error)
+	OspfAreaStatus() (map[string]string, error)
+	OspfNbrStatus() (map[string]string, error)
+}

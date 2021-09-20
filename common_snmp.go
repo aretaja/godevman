@@ -763,3 +763,118 @@ func (sd *snmpCommon) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
 
 	return out, err
 }
+
+// Get IPv6 Interface description from .iso.org.dod.internet.mgmt.mib-2.ipv6MIB.ipv6MIBObjects.ipv6IfTable
+func (sd *snmpCommon) Ip6IfDescr(idx ...string) (map[string]string, error) {
+	out := make(map[string]string)
+	oid := ".1.3.6.1.2.1.55.1.5.1.2"
+
+	r, err := sd.getmulti(oid, idx)
+	if err != nil {
+		return out, err
+	}
+
+	for o, d := range r {
+		i := strings.TrimPrefix(o, oid+".")
+		out[i] = d.OctetString
+	}
+
+	return out, nil
+}
+
+// Get info from .iso.org.dod.internet.mgmt.mib-2.ospf.ospfLsdbTable
+// Returns OSPF area to area router relations map.
+func (sd *snmpCommon) OspfAreaRouters() (map[string][]string, error) {
+	var out = make(map[string][]string)
+
+	oid := ".1.3.6.1.2.1.14.4.1.1"
+
+	r, err := sd.snmpsession.Walk(oid, true, true)
+	if err != nil && sd.handleErr(oid, err) {
+		return out, err
+	}
+
+	reLastIp := regexp.MustCompile(`^\d+\.\d+\.\d+\.\d+\.1\..*\.(\d+\.\d+\.\d+\.\d+)$`)
+
+	for k, v := range r {
+		rPart := reLastIp.FindStringSubmatch(k)
+		if len(rPart) != 2 {
+			continue
+		}
+		out[v.IPAddress] = append(out[v.IPAddress], rPart[1])
+	}
+
+	return out, nil
+}
+
+// Get info from .iso.org.dod.internet.mgmt.mib-2.ospf.ospfAreaTable
+// Returns OSPF area status map.
+func (sd *snmpCommon) OspfAreaStatus() (map[string]string, error) {
+	var out = make(map[string]string)
+
+	oid := ".1.3.6.1.2.1.14.2.1.10"
+	r, err := sd.snmpsession.Walk(oid, true, true)
+	if err != nil && sd.handleErr(oid, err) {
+		return out, err
+	}
+
+	states := map[int64]string{
+		1: "active",
+		2: "notInService",
+		3: "notReady",
+		4: "createAndGo",
+		5: "createAndWait",
+		6: "destroy",
+	}
+
+	for k, v := range r {
+		state, ok := states[v.Integer]
+		if !ok {
+			state = "unkn"
+		}
+
+		out[k] = state
+	}
+
+	return out, nil
+}
+
+// Get info from .iso.org.dod.internet.mgmt.mib-2.ospf.ospfAreaTable
+// Returns OSPF area status map.
+func (sd *snmpCommon) OspfNbrStatus() (map[string]string, error) {
+	var out = make(map[string]string)
+
+	oid := ".1.3.6.1.2.1.14.10.1.6"
+	r, err := sd.snmpsession.Walk(oid, true, true)
+	if err != nil && sd.handleErr(oid, err) {
+		return out, err
+	}
+
+	states := map[int64]string{
+		1: "down",
+		2: "attempt",
+		3: "init",
+		4: "twoWay",
+		5: "exchangeStart",
+		6: "exchange",
+		7: "loading",
+		8: "full",
+	}
+
+	reNbrIp := regexp.MustCompile(`(.*)\.\d+$`)
+	for k, v := range r {
+		nPart := reNbrIp.FindStringSubmatch(k)
+		if len(nPart) != 2 {
+			continue
+		}
+
+		state, ok := states[v.Integer]
+		if !ok {
+			state = "unkn"
+		}
+
+		out[nPart[1]] = state
+	}
+
+	return out, nil
+}
