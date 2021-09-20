@@ -61,7 +61,6 @@ func (sd *snmpCommon) getmulti(oid string, idx []string) (snmphelper.SnmpOut, er
 	}
 
 	return res, nil
-	// sd.snmpsession.MaxRepetitions
 }
 
 // Handle snmpwalk errors
