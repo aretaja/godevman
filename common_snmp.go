@@ -5,6 +5,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/aretaja/snmphelper"
+	"github.com/kr/pretty"
 )
 
 // Common SNMP functionality
@@ -877,4 +880,40 @@ func (sd *snmpCommon) OspfNbrStatus() (map[string]string, error) {
 	}
 
 	return out, nil
+}
+
+// Set Interface Admin status
+// idx - slice of ifindexes; state - up|down
+func (sd *snmpCommon) SetIfAdmStat(idx []string, state string) error {
+	pdus := []snmphelper.SetPDU{}
+	states := map[string]int{
+		"up":   1,
+		"down": 2,
+	}
+
+	s, ok := states[state]
+	if !ok {
+		return fmt.Errorf("interface state %s is not valid", state)
+	}
+
+	for _, i := range idx {
+		pdu := snmphelper.SetPDU{
+			Oid:   ".1.3.6.1.2.1.2.2.1.7." + i,
+			Vtype: "Integer",
+			Value: s,
+		}
+		pdus = append(pdus, pdu)
+	}
+
+	r, err := sd.snmpsession.Set(pdus)
+	if err != nil {
+		return err
+	}
+
+	// DEBUG
+	if sd.debug > 0 {
+		fmt.Printf("SetIfAdmStat result: %# v\n", pretty.Formatter(r))
+	}
+
+	return nil
 }
