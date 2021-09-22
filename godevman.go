@@ -171,9 +171,9 @@ type system struct {
 type ifInfo struct {
 	Descr, Name, Alias, Mac, LastStr, TypeStr, AdminStr, OperStr valString
 	Type, Mtu, Admin, Oper                                       valI64
-	Speed, Last, InOctets, InUcast, InNUcast, InMcast, InBcast, InDiscards,
-	InErrors, InUnknProtos, OutOctets, OutUcast, OutNUcast, OutMast, OutBcast,
-	OutDiscards, OutErrors valU64
+	Speed, Last, InOctets, InUcast, InMcast, InBcast, InDiscards,
+	InErrors, OutOctets, OutUcast, OutMast, OutBcast, OutDiscards,
+	OutErrors valU64
 }
 
 // Interface stack info

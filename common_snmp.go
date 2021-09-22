@@ -87,9 +87,8 @@ func (sd *snmpCommon) IfNumber() (int64, error) {
 
 // Get info from .iso.org.dod.internet.mgmt.mib-2.interfaces.ifTable and .iso.org.dod.internet.mgmt.mib-2.ifMIB.ifMIBObjects.ifXTable
 // Valid targets values: "All", "AllNoIfx", "Descr", "Name", "Alias", "Type", "Mtu", "Speed", "Mac",
-//"Admin", "Oper", "Last", "InOctets", "InUcast", "InNUcast", "InMcast", "InBcast", "InDiscards",
-// "InErrors", "InUnknProtos", "OutOctets", "OutUcast", "OutNUcast", "OutMast", "OutBcast",
-// "OutDiscards", "OutErrors"
+// "Admin", "Oper", "Last", "InOctets", "InUcast", "InMcast", "InBcast", "InDiscards", "InErrors",
+// "OutOctets", "OutUcast", "OutMast", "OutBcast", "OutDiscards", "OutErrors"
 func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInfo, error) {
 	out := make(map[string]*ifInfo)
 	iftable := ".1.3.6.1.2.1.2.2.1."
@@ -98,8 +97,8 @@ func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInf
 
 	ifOids := []string{
 		iftable + "2", iftable + "3", iftable + "4", iftable + "5", iftable + "6", iftable + "7",
-		iftable + "8", iftable + "9", iftable + "10", iftable + "11", iftable + "12", iftable + "13",
-		iftable + "14", iftable + "15", iftable + "16", iftable + "17", iftable + "18",
+		iftable + "8", iftable + "9", iftable + "10", iftable + "11", iftable + "13", iftable + "14",
+		iftable + "16", iftable + "17",
 	}
 
 	ifxOids := []string{
@@ -143,8 +142,6 @@ func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInf
 		case "InUcast":
 			oids = append(oids, ifxtable+"7")
 			oids = append(oids, iftable+"11")
-		case "InNUcast":
-			oids = append(oids, iftable+"12")
 		case "InMcast":
 			oids = append(oids, ifxtable+"8")
 		case "InBcast":
@@ -153,16 +150,12 @@ func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInf
 			oids = append(oids, iftable+"13")
 		case "InErrors":
 			oids = append(oids, iftable+"14")
-		case "InUnknProtos":
-			oids = append(oids, iftable+"15")
 		case "OutOctets":
 			oids = append(oids, ifxtable+"10")
 			oids = append(oids, iftable+"16")
 		case "OutUcast":
 			oids = append(oids, ifxtable+"11")
 			oids = append(oids, iftable+"17")
-		case "OutNUcast":
-			oids = append(oids, iftable+"18")
 		case "OutMast":
 			oids = append(oids, ifxtable+"12")
 		case "OutBcast":
@@ -187,7 +180,7 @@ func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInf
 
 	for _, oid := range oids {
 		r, err := sd.getmulti(oid, idx)
-		if err != nil {
+		if err == nil {
 			return out, err
 		}
 
@@ -276,10 +269,6 @@ func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInf
 				}
 				out[i].InUcast.Value = d.Counter32
 				out[i].InUcast.IsSet = true
-			case strings.Contains(o, iftable+"12."):
-				i := mapEntry(o, iftable+"12.")
-				out[i].InNUcast.Value = d.Counter32
-				out[i].InNUcast.IsSet = true
 			case strings.Contains(o, ifxtable+"8."):
 				i := mapEntry(o, ifxtable+"8.")
 				out[i].InMcast.Value = d.Counter64
@@ -296,10 +285,6 @@ func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInf
 				i := mapEntry(o, iftable+"14.")
 				out[i].InErrors.Value = d.Counter32
 				out[i].InErrors.IsSet = true
-			case strings.Contains(o, iftable+"15."):
-				i := mapEntry(o, iftable+"15.")
-				out[i].InUnknProtos.Value = d.Counter32
-				out[i].InUnknProtos.IsSet = true
 			case strings.Contains(o, ifxtable+"10."):
 				i := mapEntry(o, ifxtable+"10.")
 				out[i].OutOctets.Value = d.Counter64
@@ -322,10 +307,6 @@ func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInf
 				}
 				out[i].OutUcast.Value = d.Counter32
 				out[i].OutUcast.IsSet = true
-			case strings.Contains(o, iftable+"18."):
-				i := mapEntry(o, iftable+"18.")
-				out[i].OutNUcast.Value = d.Counter32
-				out[i].OutNUcast.IsSet = true
 			case strings.Contains(o, ifxtable+"12."):
 				i := mapEntry(o, ifxtable+"12.")
 				out[i].OutMast.Value = d.Counter64
