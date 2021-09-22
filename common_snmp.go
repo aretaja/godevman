@@ -883,20 +883,20 @@ func (sd *snmpCommon) OspfNbrStatus() (map[string]string, error) {
 }
 
 // Set Interface Admin status
-// idx - slice of ifindexes; state - up|down
-func (sd *snmpCommon) SetIfAdmStat(idx []string, state string) error {
+// set - map of ifIndexes and their states (up|down)
+func (sd *snmpCommon) SetIfAdmStat(set map[string]string) error {
 	pdus := []snmphelper.SetPDU{}
 	states := map[string]int{
 		"up":   1,
 		"down": 2,
 	}
 
-	s, ok := states[state]
-	if !ok {
-		return fmt.Errorf("interface state %s is not valid", state)
-	}
+	for i, state := range set {
+		s, ok := states[state]
+		if !ok {
+			return fmt.Errorf("interface state %s is not valid", state)
+		}
 
-	for _, i := range idx {
 		pdu := snmphelper.SetPDU{
 			Oid:   ".1.3.6.1.2.1.2.2.1.7." + i,
 			Vtype: "Integer",

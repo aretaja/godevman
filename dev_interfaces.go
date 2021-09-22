@@ -13,7 +13,7 @@ type DevIfs interface {
 	// Get interfaces stack info
 	IfStack() (ifStack, error)
 	// Set interface admin status
-	SetIfAdmStat(idx []string, status string) error
+	SetIfAdmStat(set map[string]string) error
 }
 
 // Functionality related to inventory
