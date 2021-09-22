@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/aretaja/snmphelper"
@@ -41,6 +42,7 @@ type device struct {
 	snmpsession *snmphelper.Session // snmp session of device
 	// clisession  devicecli.Dcli   // cli session of device
 	// websession  deviceweb.Dweb   // web session of device
+	debug int // Debug level
 }
 
 // Initialize new device object
@@ -52,6 +54,15 @@ func NewDevice(p *Dparams) (*device, error) {
 		return nil, fmt.Errorf("ip is required for new device object initialization")
 	} else {
 		d.ip = p.Ip
+	}
+
+	// Set Debug level if Env var is set
+	if l, set := os.LookupEnv("GODEVMAN_DEBUG"); set {
+		if li, err := strconv.Atoi(l); err != nil {
+			return nil, fmt.Errorf("value of GODEVMAN_DEBUG must be integer")
+		} else {
+			d.debug = li
+		}
 	}
 
 	// validate sysObjectId if defined
@@ -106,8 +117,8 @@ func NewDevice(p *Dparams) (*device, error) {
 	}
 
 	// DEBUG
-	if _, set := os.LookupEnv("GODEVMAN_DEBUG"); set {
-		fmt.Printf("%# v\n", pretty.Formatter(d))
+	if d.debug > 0 {
+		fmt.Printf("New device object: %# v\n", pretty.Formatter(d))
 	}
 
 	return &d, nil
