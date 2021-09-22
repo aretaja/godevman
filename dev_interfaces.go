@@ -14,6 +14,8 @@ type DevIfs interface {
 	IfStack() (ifStack, error)
 	// Set interface admin status
 	SetIfAdmStat(set map[string]string) error
+	// Set interface alias
+	SetIfAlias(set map[string]string) error
 }
 
 // Functionality related to inventory

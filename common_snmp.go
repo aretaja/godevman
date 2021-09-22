@@ -917,3 +917,30 @@ func (sd *snmpCommon) SetIfAdmStat(set map[string]string) error {
 
 	return nil
 }
+
+// Set Interface Alias
+// set - map of ifIndexes and related ifAliases
+func (sd *snmpCommon) SetIfAlias(set map[string]string) error {
+	pdus := []snmphelper.SetPDU{}
+
+	for i, a := range set {
+		pdu := snmphelper.SetPDU{
+			Oid:   ".1.3.6.1.2.1.31.1.1.1.18." + i,
+			Vtype: "OctetString",
+			Value: a,
+		}
+		pdus = append(pdus, pdu)
+	}
+
+	r, err := sd.snmpsession.Set(pdus)
+	if err != nil {
+		return err
+	}
+
+	// DEBUG
+	if sd.debug > 0 {
+		fmt.Printf("SetIfAlias result: %# v\n", pretty.Formatter(r))
+	}
+
+	return nil
+}
