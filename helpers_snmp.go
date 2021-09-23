@@ -69,7 +69,7 @@ func (sd *snmpCommon) handleErr(oid string, err error) bool {
 
 	if strings.HasSuffix(errStr, "NoSuchName") ||
 		strings.HasSuffix(errStr, "no results") {
-		log.Printf("warning: %s: %s: %s\n", sd.ip, oid, errStr)
+		log.Printf("warning: %s\n", errStr)
 		return false
 	}
 	return true

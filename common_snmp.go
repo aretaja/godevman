@@ -43,20 +43,21 @@ func (sd *snmpCommon) System(targets []string) (system, error) {
 		}
 	}
 
-	r, err := sd.getmulti(".1.3.6.1.2.1.1", idx)
+	oid := ".1.3.6.1.2.1.1"
+	r, err := sd.getmulti(oid, idx)
 	if err != nil {
 		return out, err
 	}
 
 	for o, d := range r {
 		switch o {
-		case ".1.3.6.1.2.1.1.1.0":
+		case oid + ".1.0":
 			out.Descr.Value = d.OctetString
 			out.Descr.IsSet = true
-		case ".1.3.6.1.2.1.1.2.0":
+		case oid + ".2.0":
 			out.ObjectID.Value = d.ObjectIdentifier
 			out.ObjectID.IsSet = true
-		case ".1.3.6.1.2.1.1.3.0":
+		case oid + ".3.0":
 			out.UpTime.Value = d.TimeTicks
 			out.UpTime.IsSet = true
 			if out.UpTime.IsSet {
@@ -64,13 +65,13 @@ func (sd *snmpCommon) System(targets []string) (system, error) {
 				out.UpTimeStr.Value = dt
 				out.UpTimeStr.IsSet = true
 			}
-		case ".1.3.6.1.2.1.1.4.0":
+		case oid + ".4.0":
 			out.Contact.Value = d.OctetString
 			out.Contact.IsSet = true
-		case ".1.3.6.1.2.1.1.5.0":
+		case oid + ".5.0":
 			out.Name.Value = d.OctetString
 			out.Name.IsSet = true
-		case ".1.3.6.1.2.1.1.6.0":
+		case oid + ".6.0":
 			out.Location.Value = d.OctetString
 			out.Location.IsSet = true
 		}
@@ -180,7 +181,7 @@ func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInf
 
 	for _, oid := range oids {
 		r, err := sd.getmulti(oid, idx)
-		if err == nil {
+		if err != nil {
 			return out, err
 		}
 
@@ -590,7 +591,7 @@ func (sd *snmpCommon) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 			if i == 0 {
 				continue
 			} else if sd.handleErr(mOid, err) {
-				return out, err
+				return out, fmt.Errorf("%s - %s", mOid, err)
 			}
 		}
 
