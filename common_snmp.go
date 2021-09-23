@@ -928,7 +928,6 @@ func (sd *snmpCommon) SetIfAlias(set map[string]string) error {
 }
 
 // Set Device sysName
-// set - map of ifIndexes and related ifAliases
 func (sd *snmpCommon) SetSysName(v string) error {
 	pdus := []snmphelper.SetPDU{
 		{
@@ -946,6 +945,52 @@ func (sd *snmpCommon) SetSysName(v string) error {
 	// DEBUG
 	if sd.debug > 0 {
 		fmt.Printf("SetSysName result: %# v\n", pretty.Formatter(r))
+	}
+
+	return nil
+}
+
+// Set Device contact
+func (sd *snmpCommon) SetContact(v string) error {
+	pdus := []snmphelper.SetPDU{
+		{
+			Oid:   ".1.3.6.1.2.1.1.4.0",
+			Vtype: "OctetString",
+			Value: v,
+		},
+	}
+
+	r, err := sd.snmpsession.Set(pdus)
+	if err != nil {
+		return err
+	}
+
+	// DEBUG
+	if sd.debug > 0 {
+		fmt.Printf("SetContact result: %# v\n", pretty.Formatter(r))
+	}
+
+	return nil
+}
+
+// Set Device location
+func (sd *snmpCommon) SetLocation(v string) error {
+	pdus := []snmphelper.SetPDU{
+		{
+			Oid:   ".1.3.6.1.2.1.1.6.0",
+			Vtype: "OctetString",
+			Value: v,
+		},
+	}
+
+	r, err := sd.snmpsession.Set(pdus)
+	if err != nil {
+		return err
+	}
+
+	// DEBUG
+	if sd.debug > 0 {
+		fmt.Printf("SetLocation result: %# v\n", pretty.Formatter(r))
 	}
 
 	return nil
