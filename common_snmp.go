@@ -926,3 +926,27 @@ func (sd *snmpCommon) SetIfAlias(set map[string]string) error {
 
 	return nil
 }
+
+// Set Device sysName
+// set - map of ifIndexes and related ifAliases
+func (sd *snmpCommon) SetSysName(v string) error {
+	pdus := []snmphelper.SetPDU{
+		{
+			Oid:   ".1.3.6.1.2.1.1.5.0",
+			Vtype: "OctetString",
+			Value: v,
+		},
+	}
+
+	r, err := sd.snmpsession.Set(pdus)
+	if err != nil {
+		return err
+	}
+
+	// DEBUG
+	if sd.debug > 0 {
+		fmt.Printf("SetSysName result: %# v\n", pretty.Formatter(r))
+	}
+
+	return nil
+}

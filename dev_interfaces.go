@@ -3,6 +3,8 @@ package godevman
 // Get system info
 type DevSys interface {
 	System(targets []string) (system, error)
+	// Set interface alias
+	SetSysName(set string) error
 }
 
 // Functionality related to interfaces
