@@ -135,6 +135,12 @@ func (d *device) Morph() interface{} {
 				snmpCommon{*d},
 			}
 			res = &md
+		case strings.HasPrefix(d.sysobjectid, ".1.3.6.1.4.1.9.1.1") ||
+			strings.HasPrefix(d.sysobjectid, ".1.3.6.1.4.1.9.1.6"):
+			md := deviceCisco{
+				snmpCommon{*d},
+			}
+			res = &md
 		default:
 			res = &snmpCommon{*d}
 		}

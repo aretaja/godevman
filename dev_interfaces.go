@@ -54,3 +54,8 @@ type DevOspf interface {
 	OspfAreaStatus() (map[string]string, error)
 	OspfNbrStatus() (map[string]string, error)
 }
+
+// Get Software version
+type DevSw interface {
+	SwVersion() (string, error)
+}
