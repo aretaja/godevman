@@ -1,6 +1,6 @@
 package godevman
 
-// Adds Mikrotic specific SNMP functionality to DeviceSnmpGeneric type
+// Adds Mikrotik specific SNMP functionality to snmpCommon type
 type deviceMikrotik struct {
 	snmpCommon
 }
