@@ -105,15 +105,30 @@ func NewDevice(p *Dparams) (*device, error) {
 		for _, oid := range oids {
 			o = append(o, oid)
 		}
+
 		res, err := sess.Get(o)
 		if err != nil {
-			return nil, fmt.Errorf("sysobjectid and sysname discovery failed - snmp error: %v", err)
+			// HACK Eltek eNexus controller don't respond to sysObjectID query
+			if strings.HasSuffix(err.Error(), "NoSuchObject") {
+				_, err2 := sess.Get([]string{".1.3.6.1.4.1.12148.10.2.2.0"})
+				if err2 == nil {
+					d.sysobjectid = ".1.3.6.1.4.1.12148.10"
+				}
+			} else {
+				return nil, fmt.Errorf("sysobjectid and sysname discovery failed - snmp error: %v", err)
+			}
+		} else {
+			if val, ok := oids["sysobjectid"]; ok {
+				soi := res[val].ObjectIdentifier
+				// HACK Eaton UPS returns not appropriate sysobjectid
+				if soi == ".2.1932768099.842208050.858927922.858993459.859026295.825438771.858993459" {
+					soi = ".1.3.6.1.4.1.705.1"
+				}
+				d.sysobjectid = soi
+			}
 		}
 
 		d.sysname = res[oids["sysname"]].OctetString
-		if val, ok := oids["sysobjectid"]; ok {
-			d.sysobjectid = res[val].ObjectIdentifier
-		}
 	}
 
 	// DEBUG
@@ -138,6 +153,16 @@ func (d *device) Morph() interface{} {
 		case strings.HasPrefix(d.sysobjectid, ".1.3.6.1.4.1.9.1.1") ||
 			strings.HasPrefix(d.sysobjectid, ".1.3.6.1.4.1.9.1.6"):
 			md := deviceCisco{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.12148.9":
+			md := deviceEltekDP7{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.12148.10":
+			md := deviceEltekEnexus{
 				snmpCommon{*d},
 			}
 			res = &md
