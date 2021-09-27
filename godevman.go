@@ -166,6 +166,11 @@ func (d *device) Morph() interface{} {
 				snmpCommon{*d},
 			}
 			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.193.223.2.1":
+			md := deviceEricssonMlPt{
+				snmpCommon{*d},
+			}
+			res = &md
 		default:
 			res = &snmpCommon{*d}
 		}
