@@ -59,6 +59,10 @@ func (sd *snmpCommon) System(targets []string) (system, error) {
 			out.ObjectID.IsSet = true
 		case oid + ".3.0":
 			out.UpTime.Value = d.TimeTicks
+			// HACK some devices (fe. Ceragon IP50*) have errorly defined sysUpTime value as Gauge32
+			if d.TimeTicks == 0 && d.Gauge32 != 0 {
+				out.UpTime.Value = d.Gauge32
+			}
 			out.UpTime.IsSet = true
 			if out.UpTime.IsSet {
 				dt := UpTimeString(out.UpTime.Value, 0)

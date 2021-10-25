@@ -145,8 +145,10 @@ func (d *device) Morph() interface{} {
 
 	if strings.HasPrefix(d.sysobjectid, ".") {
 		switch {
-		case d.sysobjectid == ".1.3.6.1.4.1.14988.1":
-			md := deviceMikrotik{
+		case d.sysobjectid == ".1.3.6.1.4.1.2281.1.20.2.2.10" ||
+			d.sysobjectid == ".1.3.6.1.4.1.2281.1.20.2.2.12" ||
+			d.sysobjectid == ".1.3.6.1.4.1.2281.1.20.2.2.14":
+			md := deviceCeragon{
 				snmpCommon{*d},
 			}
 			res = &md
@@ -174,6 +176,11 @@ func (d *device) Morph() interface{} {
 		case d.sysobjectid == ".1.3.6.1.4.1.193.81.1.1.1" ||
 			d.sysobjectid == ".1.3.6.1.4.1.193.81.1.1.3":
 			md := deviceEricssonMlTn{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.14988.1":
+			md := deviceMikrotik{
 				snmpCommon{*d},
 			}
 			res = &md
