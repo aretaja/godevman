@@ -184,6 +184,14 @@ func (d *device) Morph() interface{} {
 				snmpCommon{*d},
 			}
 			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.705.1" ||
+			d.sysobjectid == ".1.3.6.1.4.1.534.1" ||
+			d.sysobjectid == ".1.3.6.1.4.1.2254.2.4" ||
+			d.sysobjectid == ".1.3.6.1.4.1.818.1.100.1.1":
+			md := deviceUps{
+				snmpCommon{*d},
+			}
+			res = &md
 		default:
 			res = &snmpCommon{*d}
 		}
