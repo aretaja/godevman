@@ -199,9 +199,13 @@ func (d *device) Morph() interface{} {
 					res = &md
 				}
 			}
-
 		case d.sysobjectid == ".1.3.6.1.4.1.14988.1":
 			md := deviceMikrotik{
+				snmpCommon{*d},
+			}
+			res = &md
+		case strings.HasPrefix(d.sysobjectid, ".1.3.6.1.4.1.8691.7"):
+			md := deviceMoxa{
 				snmpCommon{*d},
 			}
 			res = &md
