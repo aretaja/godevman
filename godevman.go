@@ -184,6 +184,11 @@ func (d *device) Morph() interface{} {
 				snmpCommon{*d},
 			}
 			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.8072.3.2.10":
+			md := deviceLinux{
+				snmpCommon{*d},
+			}
+			res = &md
 		case d.sysobjectid == ".1.3.6.1.4.1.14988.1":
 			md := deviceMikrotik{
 				snmpCommon{*d},
