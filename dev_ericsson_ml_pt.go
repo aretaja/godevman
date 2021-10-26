@@ -16,11 +16,7 @@ func (sd *deviceEricssonMlPt) IpIfInfo(ip ...string) (map[string]*ipIfInfo, erro
 		return out, err
 	}
 
-	// Get slice of ifIndexes from ipInfo and fill output map with ip info
-	ifIdxs := make([]string, 0, len(ipInfo))
 	for i, v := range ipInfo {
-		ifIdxs = append(ifIdxs, strconv.FormatInt(int64(v.IfIdx), 10))
-
 		if out[i] == nil {
 			out[i] = new(ipIfInfo)
 		}
