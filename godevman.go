@@ -144,6 +144,14 @@ func (d *device) Morph() interface{} {
 	var res interface{} = d
 
 	if strings.HasPrefix(d.sysobjectid, ".") {
+		// HACK for broken SNMP implementation in STULZ WIB1000 devices
+		if d.sysobjectid == "0.0" {
+			_, err := d.snmpsession.Get([]string{".1.3.6.1.4.1.39983.1.1.1.1.0"})
+			if err == nil {
+				d.sysobjectid = "1.3.6.1.4.1.39983.1.1"
+			}
+		}
+
 		switch {
 		case d.sysobjectid == ".1.3.6.1.4.1.2281.1.20.2.2.10" ||
 			d.sysobjectid == ".1.3.6.1.4.1.2281.1.20.2.2.12" ||
@@ -216,6 +224,12 @@ func (d *device) Morph() interface{} {
 			res = &md
 		case d.sysobjectid == ".1.3.6.1.4.1.15004.2.1":
 			md := deviceRuggedcom{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.39983.1.1" ||
+			d.sysobjectid == ".1.3.6.1.4.1.29462.10":
+			md := deviceStulz{
 				snmpCommon{*d},
 			}
 			res = &md
