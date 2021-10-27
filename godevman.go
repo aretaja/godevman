@@ -199,8 +199,7 @@ func (d *device) Morph() interface{} {
 
 			r, err := sd.System([]string{"Descr"})
 			if err == nil {
-				matched, _ := regexp.MatchString(`(?i)martem`, r.Descr.Value)
-				if matched {
+				if match, _ := regexp.MatchString(`(?i)martem`, r.Descr.Value); match {
 					md := deviceMartem{
 						snmpCommon{*d},
 					}
@@ -233,11 +232,21 @@ func (d *device) Morph() interface{} {
 				snmpCommon{*d},
 			}
 			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.41112.1.5":
+			md := deviceUbiquiti{
+				snmpCommon{*d},
+			}
+			res = &md
 		case d.sysobjectid == ".1.3.6.1.4.1.705.1" ||
 			d.sysobjectid == ".1.3.6.1.4.1.534.1" ||
 			d.sysobjectid == ".1.3.6.1.4.1.2254.2.4" ||
 			d.sysobjectid == ".1.3.6.1.4.1.818.1.100.1.1":
 			md := deviceUps{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.13858":
+			md := deviceValere{
 				snmpCommon{*d},
 			}
 			res = &md
