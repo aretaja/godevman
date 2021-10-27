@@ -105,15 +105,30 @@ func NewDevice(p *Dparams) (*device, error) {
 		for _, oid := range oids {
 			o = append(o, oid)
 		}
+
 		res, err := sess.Get(o)
 		if err != nil {
-			return nil, fmt.Errorf("sysobjectid and sysname discovery failed - snmp error: %v", err)
+			// HACK Eltek eNexus controller don't respond to sysObjectID query
+			if strings.HasSuffix(err.Error(), "NoSuchObject") {
+				_, err2 := sess.Get([]string{".1.3.6.1.4.1.12148.10.2.2.0"})
+				if err2 == nil {
+					d.sysobjectid = ".1.3.6.1.4.1.12148.10"
+				}
+			} else {
+				return nil, fmt.Errorf("sysobjectid and sysname discovery failed - snmp error: %v", err)
+			}
+		} else {
+			if val, ok := oids["sysobjectid"]; ok {
+				soi := res[val].ObjectIdentifier
+				// HACK Eaton UPS returns not appropriate sysobjectid
+				if soi == ".2.1932768099.842208050.858927922.858993459.859026295.825438771.858993459" {
+					soi = ".1.3.6.1.4.1.705.1"
+				}
+				d.sysobjectid = soi
+			}
 		}
 
 		d.sysname = res[oids["sysname"]].OctetString
-		if val, ok := oids["sysobjectid"]; ok {
-			d.sysobjectid = res[val].ObjectIdentifier
-		}
 	}
 
 	// DEBUG
@@ -129,15 +144,109 @@ func (d *device) Morph() interface{} {
 	var res interface{} = d
 
 	if strings.HasPrefix(d.sysobjectid, ".") {
+		// HACK for broken SNMP implementation in STULZ WIB1000 devices
+		if d.sysobjectid == "0.0" {
+			_, err := d.snmpsession.Get([]string{".1.3.6.1.4.1.39983.1.1.1.1.0"})
+			if err == nil {
+				d.sysobjectid = "1.3.6.1.4.1.39983.1.1"
+			}
+		}
+
 		switch {
-		case d.sysobjectid == ".1.3.6.1.4.1.14988.1":
-			md := deviceMikrotik{
+		case d.sysobjectid == ".1.3.6.1.4.1.2281.1.20.2.2.10" ||
+			d.sysobjectid == ".1.3.6.1.4.1.2281.1.20.2.2.12" ||
+			d.sysobjectid == ".1.3.6.1.4.1.2281.1.20.2.2.14":
+			md := deviceCeragon{
 				snmpCommon{*d},
 			}
 			res = &md
 		case strings.HasPrefix(d.sysobjectid, ".1.3.6.1.4.1.9.1.1") ||
 			strings.HasPrefix(d.sysobjectid, ".1.3.6.1.4.1.9.1.6"):
 			md := deviceCisco{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.12148.9":
+			md := deviceEltekDP7{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.12148.10":
+			md := deviceEltekEnexus{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.193.223.2.1":
+			md := deviceEricssonMlPt{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.193.81.1.1.1" ||
+			d.sysobjectid == ".1.3.6.1.4.1.193.81.1.1.3":
+			md := deviceEricssonMlTn{
+				snmpCommon{*d},
+			}
+			res = &md
+		case strings.HasPrefix(d.sysobjectid, ".1.3.6.1.4.1.2636.1.1.1.2"):
+			md := deviceJuniper{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.8072.3.2.10":
+			sd := snmpCommon{*d}
+			md := deviceLinux{sd}
+			res = &md
+
+			r, err := sd.System([]string{"Descr"})
+			if err == nil {
+				if match, _ := regexp.MatchString(`(?i)martem`, r.Descr.Value); match {
+					md := deviceMartem{
+						snmpCommon{*d},
+					}
+					res = &md
+				}
+			}
+		case d.sysobjectid == ".1.3.6.1.4.1.14988.1":
+			md := deviceMikrotik{
+				snmpCommon{*d},
+			}
+			res = &md
+		case strings.HasPrefix(d.sysobjectid, ".1.3.6.1.4.1.8691.7"):
+			md := deviceMoxa{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.2606.7":
+			md := deviceRittal{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.15004.2.1":
+			md := deviceRuggedcom{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.39983.1.1" ||
+			d.sysobjectid == ".1.3.6.1.4.1.29462.10":
+			md := deviceStulz{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.41112.1.5":
+			md := deviceUbiquiti{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.705.1" ||
+			d.sysobjectid == ".1.3.6.1.4.1.534.1" ||
+			d.sysobjectid == ".1.3.6.1.4.1.2254.2.4" ||
+			d.sysobjectid == ".1.3.6.1.4.1.818.1.100.1.1":
+			md := deviceUps{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.13858":
+			md := deviceValere{
 				snmpCommon{*d},
 			}
 			res = &md
