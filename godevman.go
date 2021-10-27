@@ -214,6 +214,11 @@ func (d *device) Morph() interface{} {
 				snmpCommon{*d},
 			}
 			res = &md
+		case d.sysobjectid == ".1.3.6.1.4.1.15004.2.1":
+			md := deviceRuggedcom{
+				snmpCommon{*d},
+			}
+			res = &md
 		case d.sysobjectid == ".1.3.6.1.4.1.705.1" ||
 			d.sysobjectid == ".1.3.6.1.4.1.534.1" ||
 			d.sysobjectid == ".1.3.6.1.4.1.2254.2.4" ||
