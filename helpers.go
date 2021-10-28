@@ -3,6 +3,7 @@ package godevman
 import (
 	"fmt"
 	"math/bits"
+	"math/rand"
 	"time"
 )
 
@@ -658,4 +659,16 @@ func BitMap(bytes []byte) map[int]bool {
 		}
 	}
 	return out
+}
+
+// Returns a random string of [a-z,A-Z,0-9] chars of submitted lenght
+func RandomString(l int) string {
+	const charBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+	b := make([]byte, l)
+	for i := range b {
+		b[i] = charBytes[rand.Intn(len(charBytes))]
+	}
+
+	return string(b)
 }
