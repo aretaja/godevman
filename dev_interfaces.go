@@ -1,5 +1,7 @@
 package godevman
 
+import "net/http"
+
 // Get system info
 type DevSys interface {
 	System(targets []string) (system, error)
@@ -58,4 +60,11 @@ type DevOspf interface {
 // Get Software version
 type DevSw interface {
 	SwVersion() (string, error)
+}
+
+// Functionality related to web connection authentication
+type DevWebSess interface {
+	WebAuth(userPass []string) error
+	WebSession() *http.Client
+	WebLogout() error
 }

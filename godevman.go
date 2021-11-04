@@ -4,6 +4,7 @@ package godevman
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -41,8 +42,8 @@ type device struct {
 	sysobjectid string              // sysObjectId of device
 	snmpsession *snmphelper.Session // snmp session of device
 	// clisession  devicecli.Dcli   // cli session of device
-	// websession  deviceweb.Dweb   // web session of device
-	debug int // Debug level
+	websession *http.Client // web session of device
+	debug      int          // Debug level
 }
 
 // Initialize new device object
