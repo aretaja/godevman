@@ -19,13 +19,13 @@ const Version = "0.0.1"
 
 // SNMP credentials for snmp session
 type Snmpcred struct {
-	Ver      int    // [snmp version] (1|2|3)
 	User     string // [username|community]
 	Prot     string // [authentication protocol] (NoAuth|MD5|SHA)
 	Pass     string // [authentication protocol pass phrase]
 	Slevel   string // [security level] (noAuthNoPriv|authNoPriv|authPriv)
 	PrivProt string // [privacy protocol] (NoPriv|DES|AES|AES192|AES256|AES192C|AES256C)
 	PrivPass string // [privacy protocol pass phrase]
+	Ver      int    // [snmp version] (1|2|3)
 }
 
 // Parameters for new Device object initialization
@@ -37,13 +37,13 @@ type Dparams struct {
 
 // Device object
 type device struct {
-	ip          string              // ip of device
-	sysname     string              // sysname of device
-	sysobjectid string              // sysObjectId of device
 	snmpsession *snmphelper.Session // snmp session of device
 	// clisession  devicecli.Dcli   // cli session of device
-	websession *http.Client // web session of device
-	debug      int          // Debug level
+	websession  *http.Client // web session of device
+	ip          string       // ip of device
+	sysname     string       // sysname of device
+	sysobjectid string       // sysObjectId of device
+	debug       int          // Debug level
 }
 
 // Initialize new device object
@@ -299,10 +299,10 @@ type ifStack struct {
 
 // Inventory info
 type invInfo struct {
-	Physical bool
-	ParentId valI64
 	Descr, Position, HwProduct, HwRev, Serial, Manufacturer, Model, SwProduct,
 	SwRev valString
+	Physical bool
+	ParentId valI64
 }
 
 // Dot1Q VLAN bridgeport info
@@ -313,18 +313,18 @@ type d1qVlanBrPort struct {
 
 // Dot1Q VLAN info (Boolean in Ports map indicates untagged vlan)
 type d1qVlanInfo struct {
-	Name  string
 	Ports map[int]*d1qVlanBrPort
+	Name  string
 }
 
 // IP info
 type ipInfo struct {
-	IfIdx int64
 	Mask  string
+	IfIdx int64
 }
 
 // IP Interface info
 type ipIfInfo struct {
-	ipInfo
 	Descr, Alias string
+	ipInfo
 }
