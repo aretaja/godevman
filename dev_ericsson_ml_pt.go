@@ -50,6 +50,36 @@ func (sd *deviceEricssonMlPt) IpIfInfo(ip ...string) (map[string]*ipIfInfo, erro
 	return out, err
 }
 
+// Make http Get request and return byte slice of body.
+// Argument string should contain request parameters.
+func (sd *deviceEricssonMlPt) WebApiGet(params string) ([]byte, error) {
+	client := sd.websession
+	if sd.websession == nil {
+		// setup client
+		c, err := sd.webClient(nil)
+		if err != nil {
+			return nil, err
+		}
+		client = c
+	}
+
+	res, err := client.Get("https://" + sd.ip + "/cgi-bin/main.fcgi?noCache=" +
+		RandomString(13) + "&" + params)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	body, _ := ioutil.ReadAll(res.Body)
+
+	if res.StatusCode > 299 {
+		return body, fmt.Errorf("response failed with status code: %d", res.StatusCode)
+	}
+
+	return body, nil
+}
+
 // Login via web API and stores web session in deviceEricssonMlPt.websession.
 // Use this before use of methods which are accessing restricted device web API.
 func (sd *deviceEricssonMlPt) WebAuth(userPass []string) error {
@@ -121,17 +151,9 @@ func (sd *deviceEricssonMlPt) WebLogout() error {
 		return nil
 	}
 
-	res, err := sd.websession.Get("https://" + sd.ip + "/cgi-bin/main.fcgi?noCache=" + RandomString(13) +
-		"&CATEGORY=LOGOUT")
+	body, err := sd.WebApiGet("CATEGORY=LOGOUT")
 	if err != nil {
 		return err
-	}
-
-	defer res.Body.Close()
-
-	body, _ := ioutil.ReadAll(res.Body)
-	if res.StatusCode > 299 {
-		return fmt.Errorf("response failed with status code: %d", res.StatusCode)
 	}
 
 	var resJson struct {
