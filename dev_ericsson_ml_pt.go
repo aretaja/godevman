@@ -55,7 +55,7 @@ func (sd *deviceEricssonMlPt) IpIfInfo(ip ...string) (map[string]*ipIfInfo, erro
 // Make http Get request and return byte slice of body.
 // Argument string should contain request parameters.
 func (sd *deviceEricssonMlPt) WebApiGet(params string) ([]byte, error) {
-	client := sd.websession
+	client := sd.websession.client
 	if sd.websession == nil {
 		// setup client
 		c, err := sd.webClient(nil)
@@ -141,7 +141,7 @@ func (sd *deviceEricssonMlPt) WebAuth(userPass []string) error {
 
 	client.Jar.SetCookies(urlObj, cookies)
 
-	sd.websession = client
+	sd.websession.client = client
 
 	return nil
 }

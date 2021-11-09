@@ -24,7 +24,7 @@ func (rt MyRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
 
 // Get authenticated web session
 func (d *device) WebSession() *http.Client {
-	return d.websession
+	return d.websession.client
 }
 
 // Create http client

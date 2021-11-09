@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/aretaja/snmphelper"
-	"github.com/kr/pretty"
+	"github.com/davecgh/go-spew/spew"
 )
 
 // Version of release
@@ -33,17 +33,24 @@ type Dparams struct {
 	Ip          string // ip of device
 	Sysobjectid string // sysObjectId of Device
 	Snmpcred    Snmpcred
+	Webcred     []string // Websession credentials
+}
+
+// Websession parameters
+type webSess struct {
+	client *http.Client // web client of device
+	cred   []string     // web session credentials
 }
 
 // Device object
 type device struct {
 	snmpsession *snmphelper.Session // snmp session of device
 	// clisession  devicecli.Dcli   // cli session of device
-	websession  *http.Client // web session of device
-	ip          string       // ip of device
-	sysname     string       // sysname of device
-	sysobjectid string       // sysObjectId of device
-	debug       int          // Debug level
+	websession  *webSess // web session of device
+	ip          string   // ip of device
+	sysname     string   // sysname of device
+	sysobjectid string   // sysObjectId of device
+	debug       int      // Debug level
 }
 
 // Initialize new device object
@@ -64,6 +71,15 @@ func NewDevice(p *Dparams) (*device, error) {
 		} else {
 			d.debug = li
 		}
+	}
+
+	// Setup Web session data
+	d.websession = &webSess{
+		client: nil,
+		cred:   nil,
+	}
+	if p.Webcred != nil {
+		d.websession.cred = p.Webcred
 	}
 
 	// validate sysObjectId if defined
@@ -88,7 +104,7 @@ func NewDevice(p *Dparams) (*device, error) {
 			PrivPass: p.Snmpcred.PrivPass,
 		}
 
-		// Initialize session
+		// Initialize SNMP session
 		sess, err := session.New()
 		if err != nil {
 			return nil, fmt.Errorf("create new snmp session failed - error: %v", err)
@@ -134,7 +150,7 @@ func NewDevice(p *Dparams) (*device, error) {
 
 	// DEBUG
 	if d.debug > 0 {
-		fmt.Printf("New device object: %# v\n", pretty.Formatter(d))
+		spew.Printf("New device object: %# v\n", d)
 	}
 
 	return &d, nil

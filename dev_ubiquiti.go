@@ -57,7 +57,7 @@ func (sd *deviceUbiquiti) WebAuth(userPass []string) error {
 		}
 	}
 
-	sd.websession = client
+	sd.websession.client = client
 
 	return nil
 }
@@ -69,7 +69,7 @@ func (sd *deviceUbiquiti) WebLogout() error {
 		return nil
 	}
 
-	res, err := sd.websession.Post("https://"+sd.ip+"/api/v1.0/user/logout", "application/json", nil)
+	res, err := sd.websession.client.Post("https://"+sd.ip+"/api/v1.0/user/logout", "application/json", nil)
 	if err != nil {
 		return err
 	}
