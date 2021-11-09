@@ -829,7 +829,7 @@ func (sd *snmpCommon) OspfAreaStatus() (map[string]string, error) {
 }
 
 // Get info from .iso.org.dod.internet.mgmt.mib-2.ospf.ospfAreaTable
-// Returns OSPF area status map.
+// Returns OSPF neighbour status map.
 func (sd *snmpCommon) OspfNbrStatus() (map[string]string, error) {
 	var out = make(map[string]string)
 
