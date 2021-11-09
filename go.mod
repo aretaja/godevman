@@ -9,6 +9,8 @@ replace (
 )
 
 require (
-	github.com/aretaja/snmphelper v1.0.0
-	github.com/kr/pretty v0.2.1
+	github.com/PraserX/ipconv v1.1.0
+	github.com/aretaja/snmphelper v1.1.1
+	github.com/davecgh/go-spew v1.1.1
+	github.com/kr/pretty v0.3.0
 )

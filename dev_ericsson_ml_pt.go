@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+
+	"github.com/PraserX/ipconv"
 )
 
 // Adds Ericsson MINI-LINK PT specific SNMP functionality to snmpCommon type
@@ -171,4 +173,79 @@ func (sd *deviceEricssonMlPt) WebLogout() error {
 	sd.websession = nil
 
 	return nil
+}
+
+// TODO
+func (sd *deviceEricssonMlPt) OspfAreaRouters() (map[string][]string, error) {
+	return nil, fmt.Errorf("func OspfAreaRouters not implemented yet on this device type")
+}
+
+// TODO
+func (sd *deviceEricssonMlPt) OspfAreaStatus() (map[string]string, error) {
+	return nil, fmt.Errorf("func OspfAreaStatus not implemented yet on this device type")
+}
+
+func (sd *deviceEricssonMlPt) OspfNbrStatus() (map[string]string, error) {
+	body, err := sd.WebApiGet("CATEGORY=JSONREQUEST&OSPF_NEIGHBOUR")
+	if err != nil {
+		return nil, fmt.Errorf("get request from device api failed: %s", err)
+	}
+
+	// OSPF info provided by MINI-LINK PT web API
+	type ericssonMlPtOspfInfo struct {
+		OspfNeighbours []struct {
+			OspfNeighbour struct {
+				BInterfaceName              string `json:"bInterfaceName"`
+				IRouterID                   int    `json:"iRouterId"`
+				WInterfaceIndex             int    `json:"wInterfaceIndex"`
+				ENeighbourState             int    `json:"eNeighbourState"`
+				EPermanence                 int    `json:"ePermanence"`
+				BPriority                   int    `json:"bPriority"`
+				BOptions                    int    `json:"bOptions"`
+				LEvents                     int    `json:"lEvents"`
+				LRetransmisssionQueueLength int    `json:"lRetransmisssionQueueLength"`
+			} `json:"OSPF_NEIGHBOUR"`
+			OspfNeighbourMoid struct {
+				WClass          int `json:"wClass"`
+				IRouterID       int `json:"iRouterId"`
+				WInterfaceIndex int `json:"wInterfaceIndex"`
+				INbrIPAddr      int `json:"iNbrIpAddr"`
+			} `json:"OSPF_NEIGHBOUR_MOID"`
+		} `json:"OSPF_NEIGHBOUR"`
+	}
+
+	info := &ericssonMlPtOspfInfo{}
+	err = json.Unmarshal(body, info)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal ospf info failed: %s", err)
+	}
+
+	if info == nil || len(info.OspfNeighbours) == 0 {
+		return nil, fmt.Errorf("no ospf info")
+	}
+
+	states := map[int]string{
+		11: "down",
+		12: "attempt",
+		13: "init",
+		14: "twoWay",
+		15: "exchangeStart",
+		16: "exchange",
+		17: "loading",
+		18: "full",
+	}
+
+	out := make(map[string]string)
+	for _, i := range info.OspfNeighbours {
+		ip := ipconv.IntToIPv4(uint32(i.OspfNeighbourMoid.INbrIPAddr))
+
+		// Reverse ip slice
+		for i, j := 0, len(ip)-1; i < j; i, j = i+1, j-1 {
+			ip[i], ip[j] = ip[j], ip[i]
+		}
+
+		out[ip.String()] = states[i.OspfNeighbour.ENeighbourState]
+	}
+
+	return out, err
 }
