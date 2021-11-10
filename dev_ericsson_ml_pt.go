@@ -186,9 +186,18 @@ func (sd *deviceEricssonMlPt) OspfAreaStatus() (map[string]string, error) {
 }
 
 func (sd *deviceEricssonMlPt) OspfNbrStatus() (map[string]string, error) {
+	if err := sd.WebAuth(sd.webSession.cred); err != nil {
+		return nil, fmt.Errorf("error: WebAuth - %s", err)
+	}
+
 	body, err := sd.WebApiGet("CATEGORY=JSONREQUEST&OSPF_NEIGHBOUR")
 	if err != nil {
 		return nil, fmt.Errorf("get request from device api failed: %s", err)
+	}
+
+	err = sd.WebLogout()
+	if err != nil {
+		return nil, fmt.Errorf("errors: WebLogout - %s", err)
 	}
 
 	// OSPF info provided by MINI-LINK PT web API
