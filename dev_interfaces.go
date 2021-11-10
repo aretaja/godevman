@@ -68,3 +68,8 @@ type DevWebSess interface {
 	WebSession() *http.Client
 	WebLogout() error
 }
+
+// Get RL neighbour info
+type DevRlNbr interface {
+	RlNbrInfo() (map[int]*map[string]string, error)
+}

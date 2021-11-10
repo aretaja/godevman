@@ -56,7 +56,7 @@ func (sd *deviceEricssonMlPt) IpIfInfo(ip ...string) (map[string]*ipIfInfo, erro
 // Argument string should contain request parameters.
 func (sd *deviceEricssonMlPt) WebApiGet(params string) ([]byte, error) {
 	client := sd.webSession.client
-	if sd.webSession == nil {
+	if sd.webSession.client == nil {
 		// setup client
 		c, err := sd.webClient(nil)
 		if err != nil {
@@ -82,7 +82,7 @@ func (sd *deviceEricssonMlPt) WebApiGet(params string) ([]byte, error) {
 	return body, nil
 }
 
-// Login via web API and stores web session in deviceEricssonMlPt.websession.
+// Login via web API and stores web session in deviceEricssonMlPt.webSession.client.
 // Use this before use of methods which are accessing restricted device web API.
 func (sd *deviceEricssonMlPt) WebAuth(userPass []string) error {
 	// setup client
@@ -146,10 +146,10 @@ func (sd *deviceEricssonMlPt) WebAuth(userPass []string) error {
 	return nil
 }
 
-// Logout via web API and delete web session from deviceEricssonMlPt.websession.
+// Logout via web API and delete web session from deviceEricssonMlPt.webSession.client.
 // Use this after use of methods which are accessing restricted device web API.
 func (sd *deviceEricssonMlPt) WebLogout() error {
-	if sd.webSession == nil {
+	if sd.webSession.client == nil {
 		return nil
 	}
 
@@ -170,7 +170,7 @@ func (sd *deviceEricssonMlPt) WebLogout() error {
 		return fmt.Errorf("logout failed: %s", resJson.Status)
 	}
 
-	sd.webSession = nil
+	sd.webSession.client = nil
 
 	return nil
 }
@@ -185,6 +185,7 @@ func (sd *deviceEricssonMlPt) OspfAreaStatus() (map[string]string, error) {
 	return nil, fmt.Errorf("func OspfAreaStatus not implemented yet on this device type")
 }
 
+// Get OSPF neighbour status
 func (sd *deviceEricssonMlPt) OspfNbrStatus() (map[string]string, error) {
 	if err := sd.WebAuth(sd.webSession.cred); err != nil {
 		return nil, fmt.Errorf("error: WebAuth - %s", err)
@@ -201,7 +202,7 @@ func (sd *deviceEricssonMlPt) OspfNbrStatus() (map[string]string, error) {
 	}
 
 	// OSPF info provided by MINI-LINK PT web API
-	type ericssonMlPtOspfInfo struct {
+	type ospfInfo struct {
 		OspfNeighbours []struct {
 			OspfNeighbour struct {
 				BInterfaceName              string `json:"bInterfaceName"`
@@ -223,7 +224,7 @@ func (sd *deviceEricssonMlPt) OspfNbrStatus() (map[string]string, error) {
 		} `json:"OSPF_NEIGHBOUR"`
 	}
 
-	info := &ericssonMlPtOspfInfo{}
+	info := &ospfInfo{}
 	err = json.Unmarshal(body, info)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal ospf info failed: %s", err)
@@ -254,6 +255,157 @@ func (sd *deviceEricssonMlPt) OspfNbrStatus() (map[string]string, error) {
 		}
 
 		out[ip.String()] = states[i.OspfNeighbour.ENeighbourState]
+	}
+
+	return out, err
+}
+
+// Get RL neighbour info
+func (sd *deviceEricssonMlPt) RlNbrInfo() (map[int]*map[string]string, error) {
+	body, err := sd.WebApiGet("CATEGORY=JSONREQUEST&FE_STATUS_VIEW")
+	if err != nil {
+		return nil, fmt.Errorf("get request from device api failed: %s", err)
+	}
+
+	type feRlInfo struct {
+		FeStatusView struct {
+			CtPassive string `json:"CT_PASSIVE"`
+			Software  struct {
+				BRunningNR string `json:"bRunningNR"`
+			} `json:"SOFTWARE"`
+			System struct {
+				BName string `json:"bName"`
+			} `json:"SYSTEM"`
+			SystemTimeInfo struct {
+				TimeZoneOffset        string `json:"timeZoneOffset"`
+				UpTime                int64  `json:"upTime"`
+				CurrentTimestamp      int    `json:"currentTimestamp"`
+				CurrentLocalTimestamp int    `json:"currentLocalTimestamp"`
+				TimeZoneOffsetMinutes int    `json:"timeZoneOffsetMinutes"`
+				IsDSTEnabled          bool   `json:"isDSTEnabled"`
+			} `json:"SYSTEM_TIME_INFO"`
+			InterfaceModuleInfo []struct {
+				InterfaceModuleInfo struct {
+					BVendorName string `json:"bVendorName"`
+				} `json:"INTERFACE_MODULE_INFO"`
+				InterfaceModuleInfoMoid struct {
+					BSlot int `json:"bSlot"`
+					BPort int `json:"bPort"`
+				} `json:"INTERFACE_MODULE_INFO_MOID"`
+			} `json:"INTERFACE_MODULE_INFO"`
+			CtMember []struct {
+				CtMember struct {
+					BDistinguishedName string `json:"bDistinguishedName"`
+					BSlotNumber        int    `json:"bSlotNumber"`
+					BCtNumber          int    `json:"bCtNumber"`
+				} `json:"CT_MEMBER"`
+			} `json:"CT_MEMBER"`
+			LanxPort []struct {
+				LanxPortMoid struct {
+					WClass int `json:"wClass"`
+					BSlot  int `json:"bSlot"`
+					BPort  int `json:"bPort"`
+				} `json:"LANX_PORT_MOID"`
+				LanxPort struct {
+					EAdminStatus int `json:"eAdminStatus"`
+				} `json:"LANX_PORT"`
+			} `json:"LANX_PORT"`
+			Xpic        []interface{} `json:"XPIC"`
+			IPInterface []struct {
+				Address string `json:"address"`
+				Mask    string `json:"mask"`
+				Ipv6    string `json:"ipv6"`
+				Index   int    `json:"index"`
+			} `json:"IP_INTERFACE"`
+			CurrentAlarmsEntry []interface{} `json:"CURRENT_ALARMS_ENTRY"`
+			CarrierTermination []struct {
+				BActualOutputPower       string `json:"bActualOutputPower"`
+				BDescription             string `json:"bDescription"`
+				BActualXpi               string `json:"bActualXpi"`
+				BActualInputPower        string `json:"bActualInputPower"`
+				BDistinguishedName       string `json:"bDistinguishedName"`
+				LTxFrequency             int    `json:"lTxFrequency"`
+				ETxOperStatus            int    `json:"eTxOperStatus"`
+				ETxAdminStatus           int    `json:"eTxAdminStatus"`
+				WFrameID                 int    `json:"wFrameId"`
+				SbSelectedMinOutputPower int    `json:"sbSelectedMinOutputPower"`
+				SbSelectedMaxOutputPower int    `json:"sbSelectedMaxOutputPower"`
+				EStatus                  int    `json:"eStatus"`
+				EXpicStatus              int    `json:"eXpicStatus"`
+				ECarrierID               int    `json:"eCarrierId"`
+				LActualTxCapacity        int    `json:"lActualTxCapacity"`
+				EActualTxAcm             int    `json:"eActualTxAcm"`
+			} `json:"CARRIER_TERMINATION"`
+			RadioLinkTerminal struct {
+				BDistinguishedName string `json:"bDistinguishedName"`
+				I6NeIpv6Address    string `json:"i6NeIpv6Address"`
+				BNeName            string `json:"bNeName"`
+				BID                string `json:"bId"`
+				INeIPAddress       int    `json:"iNeIpAddress"`
+				EStatus            int    `json:"eStatus"`
+				EMode              int    `json:"eMode"`
+				ENeType            int    `json:"eNeType"`
+			} `json:"RADIO_LINK_TERMINAL"`
+			CtActive struct {
+				BActualOutputPower       string `json:"bActualOutputPower"`
+				BDescription             string `json:"bDescription"`
+				BActualXpi               string `json:"bActualXpi"`
+				BActualInputPower        string `json:"bActualInputPower"`
+				BDistinguishedName       string `json:"bDistinguishedName"`
+				LTxFrequency             int    `json:"lTxFrequency"`
+				ETxOperStatus            int    `json:"eTxOperStatus"`
+				ETxAdminStatus           int    `json:"eTxAdminStatus"`
+				WFrameID                 int    `json:"wFrameId"`
+				SbSelectedMinOutputPower int    `json:"sbSelectedMinOutputPower"`
+				SbSelectedMaxOutputPower int    `json:"sbSelectedMaxOutputPower"`
+				EStatus                  int    `json:"eStatus"`
+				EXpicStatus              int    `json:"eXpicStatus"`
+				ECarrierID               int    `json:"eCarrierId"`
+				LActualTxCapacity        int    `json:"lActualTxCapacity"`
+				EActualTxAcm             int    `json:"eActualTxAcm"`
+			} `json:"CT_ACTIVE"`
+			VirtualNode struct {
+				EEquipmentProtection int `json:"eEquipmentProtection"`
+				ESysController1State int `json:"eSysController1State"`
+				ESysController2State int `json:"eSysController2State"`
+				BActiveSlot          int `json:"bActiveSlot"`
+				BoIsVirtualNode      int `json:"boIsVirtualNode"`
+				EMode                int `json:"eMode"`
+			} `json:"VIRTUAL_NODE"`
+			RlwanPort struct {
+				EMlhcAdminStatus int `json:"eMlhcAdminStatus"`
+				EMlhcOperStatus  int `json:"eMlhcOperStatus"`
+				EPlcAdminStatus  int `json:"ePlcAdminStatus"`
+				EPlcOperStatus   int `json:"ePlcOperStatus"`
+			} `json:"RLWAN_PORT"`
+		} `json:"FE_STATUS_VIEW"`
+	}
+
+	info := &feRlInfo{}
+	err = json.Unmarshal(body, info)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal fe rl info failed: %s", err)
+	}
+
+	if info == nil {
+		return nil, fmt.Errorf("no fe rl info")
+	}
+
+	ip := ipconv.IntToIPv4(uint32(info.FeStatusView.RadioLinkTerminal.INeIPAddress))
+
+	// Reverse ip slice
+	for i, j := 0, len(ip)-1; i < j; i, j = i+1, j-1 {
+		ip[i], ip[j] = ip[j], ip[i]
+	}
+
+	out := map[int]*map[string]string{
+		0: {
+			"sysName":    info.FeStatusView.RadioLinkTerminal.BNeName,
+			"powerOut":   info.FeStatusView.CtActive.BActualOutputPower,
+			"powerIn":    info.FeStatusView.CtActive.BActualInputPower,
+			"txCapacity": fmt.Sprintf("%d", info.FeStatusView.CtActive.LActualTxCapacity*1000),
+			"ip":         ip.String(),
+		},
 	}
 
 	return out, err
