@@ -18,7 +18,7 @@ import (
 const Version = "0.0.1"
 
 // SNMP credentials for snmp session
-type Snmpcred struct {
+type SnmpCred struct {
 	User     string // [username|community]
 	Prot     string // [authentication protocol] (NoAuth|MD5|SHA)
 	Pass     string // [authentication protocol pass phrase]
@@ -31,8 +31,8 @@ type Snmpcred struct {
 // Parameters for new Device object initialization
 type Dparams struct {
 	Ip          string // ip of device
-	Sysobjectid string // sysObjectId of Device
-	Snmpcred    Snmpcred
+	SysObjectId string // sysObjectId of Device
+	SnmpCred    SnmpCred
 	Webcred     []string // Websession credentials
 }
 
@@ -44,12 +44,12 @@ type webSess struct {
 
 // Device object
 type device struct {
-	snmpsession *snmphelper.Session // snmp session of device
+	snmpSession *snmphelper.Session // snmp session of device
 	// clisession  devicecli.Dcli   // cli session of device
-	websession  *webSess // web session of device
+	webSession  *webSess // web session of device
 	ip          string   // ip of device
-	sysname     string   // sysname of device
-	sysobjectid string   // sysObjectId of device
+	sysName     string   // sysname of device
+	sysObjectId string   // sysObjectId of device
 	debug       int      // Debug level
 }
 
@@ -74,34 +74,34 @@ func NewDevice(p *Dparams) (*device, error) {
 	}
 
 	// Setup Web session data
-	d.websession = &webSess{
+	d.webSession = &webSess{
 		client: nil,
 		cred:   nil,
 	}
 	if p.Webcred != nil {
-		d.websession.cred = p.Webcred
+		d.webSession.cred = p.Webcred
 	}
 
 	// validate sysObjectId if defined
-	if p.Sysobjectid != "" {
-		if set, _ := regexp.Match(`^(no-snmp[-\w]*|\.[\.\d]+)$`, []byte(p.Sysobjectid)); set {
-			d.sysobjectid = p.Sysobjectid
+	if p.SysObjectId != "" {
+		if set, _ := regexp.Match(`^(no-snmp[-\w]*|\.[\.\d]+)$`, []byte(p.SysObjectId)); set {
+			d.sysObjectId = p.SysObjectId
 		} else {
-			return nil, fmt.Errorf("not valid sysobjectid - %s", p.Sysobjectid)
+			return nil, fmt.Errorf("not valid sysobjectid - %s", p.SysObjectId)
 		}
 	}
 
-	if set, _ := regexp.Match(`^no-snmp`, []byte(p.Sysobjectid)); !set && p.Snmpcred.User != "" {
+	if set, _ := regexp.Match(`^no-snmp`, []byte(p.SysObjectId)); !set && p.SnmpCred.User != "" {
 		// Session variables
 		session := snmphelper.Session{
 			Host:     p.Ip,
-			Ver:      p.Snmpcred.Ver,
-			User:     p.Snmpcred.User,
-			Prot:     p.Snmpcred.Prot,
-			Pass:     p.Snmpcred.Pass,
-			Slevel:   p.Snmpcred.Slevel,
-			PrivProt: p.Snmpcred.PrivProt,
-			PrivPass: p.Snmpcred.PrivPass,
+			Ver:      p.SnmpCred.Ver,
+			User:     p.SnmpCred.User,
+			Prot:     p.SnmpCred.Prot,
+			Pass:     p.SnmpCred.Pass,
+			Slevel:   p.SnmpCred.Slevel,
+			PrivProt: p.SnmpCred.PrivProt,
+			PrivPass: p.SnmpCred.PrivPass,
 		}
 
 		// Initialize SNMP session
@@ -110,11 +110,11 @@ func NewDevice(p *Dparams) (*device, error) {
 			return nil, fmt.Errorf("create new snmp session failed - error: %v", err)
 		}
 
-		d.snmpsession = sess
+		d.snmpSession = sess
 
 		// get sysobjectid and sysname
 		oids := map[string]string{"sysname": ".1.3.6.1.2.1.1.5.0"}
-		if d.sysobjectid == "" {
+		if d.sysObjectId == "" {
 			oids["sysobjectid"] = ".1.3.6.1.2.1.1.2.0"
 		}
 
@@ -129,7 +129,7 @@ func NewDevice(p *Dparams) (*device, error) {
 			if strings.HasSuffix(err.Error(), "NoSuchObject") {
 				_, err2 := sess.Get([]string{".1.3.6.1.4.1.12148.10.2.2.0"})
 				if err2 == nil {
-					d.sysobjectid = ".1.3.6.1.4.1.12148.10"
+					d.sysObjectId = ".1.3.6.1.4.1.12148.10"
 				}
 			} else {
 				return nil, fmt.Errorf("sysobjectid and sysname discovery failed - snmp error: %v", err)
@@ -141,11 +141,11 @@ func NewDevice(p *Dparams) (*device, error) {
 				if soi == ".2.1932768099.842208050.858927922.858993459.859026295.825438771.858993459" {
 					soi = ".1.3.6.1.4.1.705.1"
 				}
-				d.sysobjectid = soi
+				d.sysObjectId = soi
 			}
 		}
 
-		d.sysname = res[oids["sysname"]].OctetString
+		d.sysName = res[oids["sysname"]].OctetString
 	}
 
 	// DEBUG
@@ -160,56 +160,56 @@ func NewDevice(p *Dparams) (*device, error) {
 func (d *device) Morph() interface{} {
 	var res interface{} = d
 
-	if strings.HasPrefix(d.sysobjectid, ".") {
+	if strings.HasPrefix(d.sysObjectId, ".") {
 		// HACK for broken SNMP implementation in STULZ WIB1000 devices
-		if d.sysobjectid == "0.0" {
-			_, err := d.snmpsession.Get([]string{".1.3.6.1.4.1.39983.1.1.1.1.0"})
+		if d.sysObjectId == "0.0" {
+			_, err := d.snmpSession.Get([]string{".1.3.6.1.4.1.39983.1.1.1.1.0"})
 			if err == nil {
-				d.sysobjectid = "1.3.6.1.4.1.39983.1.1"
+				d.sysObjectId = "1.3.6.1.4.1.39983.1.1"
 			}
 		}
 
 		switch {
-		case d.sysobjectid == ".1.3.6.1.4.1.2281.1.20.2.2.10" ||
-			d.sysobjectid == ".1.3.6.1.4.1.2281.1.20.2.2.12" ||
-			d.sysobjectid == ".1.3.6.1.4.1.2281.1.20.2.2.14":
+		case d.sysObjectId == ".1.3.6.1.4.1.2281.1.20.2.2.10" ||
+			d.sysObjectId == ".1.3.6.1.4.1.2281.1.20.2.2.12" ||
+			d.sysObjectId == ".1.3.6.1.4.1.2281.1.20.2.2.14":
 			md := deviceCeragon{
 				snmpCommon{*d},
 			}
 			res = &md
-		case strings.HasPrefix(d.sysobjectid, ".1.3.6.1.4.1.9.1.1") ||
-			strings.HasPrefix(d.sysobjectid, ".1.3.6.1.4.1.9.1.6"):
+		case strings.HasPrefix(d.sysObjectId, ".1.3.6.1.4.1.9.1.1") ||
+			strings.HasPrefix(d.sysObjectId, ".1.3.6.1.4.1.9.1.6"):
 			md := deviceCisco{
 				snmpCommon{*d},
 			}
 			res = &md
-		case d.sysobjectid == ".1.3.6.1.4.1.12148.9":
+		case d.sysObjectId == ".1.3.6.1.4.1.12148.9":
 			md := deviceEltekDP7{
 				snmpCommon{*d},
 			}
 			res = &md
-		case d.sysobjectid == ".1.3.6.1.4.1.12148.10":
+		case d.sysObjectId == ".1.3.6.1.4.1.12148.10":
 			md := deviceEltekEnexus{
 				snmpCommon{*d},
 			}
 			res = &md
-		case d.sysobjectid == ".1.3.6.1.4.1.193.223.2.1":
+		case d.sysObjectId == ".1.3.6.1.4.1.193.223.2.1":
 			md := deviceEricssonMlPt{
 				snmpCommon{*d},
 			}
 			res = &md
-		case d.sysobjectid == ".1.3.6.1.4.1.193.81.1.1.1" ||
-			d.sysobjectid == ".1.3.6.1.4.1.193.81.1.1.3":
+		case d.sysObjectId == ".1.3.6.1.4.1.193.81.1.1.1" ||
+			d.sysObjectId == ".1.3.6.1.4.1.193.81.1.1.3":
 			md := deviceEricssonMlTn{
 				snmpCommon{*d},
 			}
 			res = &md
-		case strings.HasPrefix(d.sysobjectid, ".1.3.6.1.4.1.2636.1.1.1.2"):
+		case strings.HasPrefix(d.sysObjectId, ".1.3.6.1.4.1.2636.1.1.1.2"):
 			md := deviceJuniper{
 				snmpCommon{*d},
 			}
 			res = &md
-		case d.sysobjectid == ".1.3.6.1.4.1.8072.3.2.10":
+		case d.sysObjectId == ".1.3.6.1.4.1.8072.3.2.10":
 			sd := snmpCommon{*d}
 			md := deviceLinux{sd}
 			res = &md
@@ -223,46 +223,46 @@ func (d *device) Morph() interface{} {
 					res = &md
 				}
 			}
-		case d.sysobjectid == ".1.3.6.1.4.1.14988.1":
+		case d.sysObjectId == ".1.3.6.1.4.1.14988.1":
 			md := deviceMikrotik{
 				snmpCommon{*d},
 			}
 			res = &md
-		case strings.HasPrefix(d.sysobjectid, ".1.3.6.1.4.1.8691.7"):
+		case strings.HasPrefix(d.sysObjectId, ".1.3.6.1.4.1.8691.7"):
 			md := deviceMoxa{
 				snmpCommon{*d},
 			}
 			res = &md
-		case d.sysobjectid == ".1.3.6.1.4.1.2606.7":
+		case d.sysObjectId == ".1.3.6.1.4.1.2606.7":
 			md := deviceRittal{
 				snmpCommon{*d},
 			}
 			res = &md
-		case d.sysobjectid == ".1.3.6.1.4.1.15004.2.1":
+		case d.sysObjectId == ".1.3.6.1.4.1.15004.2.1":
 			md := deviceRuggedcom{
 				snmpCommon{*d},
 			}
 			res = &md
-		case d.sysobjectid == ".1.3.6.1.4.1.39983.1.1" ||
-			d.sysobjectid == ".1.3.6.1.4.1.29462.10":
+		case d.sysObjectId == ".1.3.6.1.4.1.39983.1.1" ||
+			d.sysObjectId == ".1.3.6.1.4.1.29462.10":
 			md := deviceStulz{
 				snmpCommon{*d},
 			}
 			res = &md
-		case d.sysobjectid == ".1.3.6.1.4.1.41112.1.5":
+		case d.sysObjectId == ".1.3.6.1.4.1.41112.1.5":
 			md := deviceUbiquiti{
 				snmpCommon{*d},
 			}
 			res = &md
-		case d.sysobjectid == ".1.3.6.1.4.1.705.1" ||
-			d.sysobjectid == ".1.3.6.1.4.1.534.1" ||
-			d.sysobjectid == ".1.3.6.1.4.1.2254.2.4" ||
-			d.sysobjectid == ".1.3.6.1.4.1.818.1.100.1.1":
+		case d.sysObjectId == ".1.3.6.1.4.1.705.1" ||
+			d.sysObjectId == ".1.3.6.1.4.1.534.1" ||
+			d.sysObjectId == ".1.3.6.1.4.1.2254.2.4" ||
+			d.sysObjectId == ".1.3.6.1.4.1.818.1.100.1.1":
 			md := deviceUps{
 				snmpCommon{*d},
 			}
 			res = &md
-		case d.sysobjectid == ".1.3.6.1.4.1.13858":
+		case d.sysObjectId == ".1.3.6.1.4.1.13858":
 			md := deviceValere{
 				snmpCommon{*d},
 			}

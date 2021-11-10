@@ -55,8 +55,8 @@ func (sd *deviceEricssonMlPt) IpIfInfo(ip ...string) (map[string]*ipIfInfo, erro
 // Make http Get request and return byte slice of body.
 // Argument string should contain request parameters.
 func (sd *deviceEricssonMlPt) WebApiGet(params string) ([]byte, error) {
-	client := sd.websession.client
-	if sd.websession == nil {
+	client := sd.webSession.client
+	if sd.webSession == nil {
 		// setup client
 		c, err := sd.webClient(nil)
 		if err != nil {
@@ -141,7 +141,7 @@ func (sd *deviceEricssonMlPt) WebAuth(userPass []string) error {
 
 	client.Jar.SetCookies(urlObj, cookies)
 
-	sd.websession.client = client
+	sd.webSession.client = client
 
 	return nil
 }
@@ -149,7 +149,7 @@ func (sd *deviceEricssonMlPt) WebAuth(userPass []string) error {
 // Logout via web API and delete web session from deviceEricssonMlPt.websession.
 // Use this after use of methods which are accessing restricted device web API.
 func (sd *deviceEricssonMlPt) WebLogout() error {
-	if sd.websession == nil {
+	if sd.webSession == nil {
 		return nil
 	}
 
@@ -170,7 +170,7 @@ func (sd *deviceEricssonMlPt) WebLogout() error {
 		return fmt.Errorf("logout failed: %s", resJson.Status)
 	}
 
-	sd.websession = nil
+	sd.webSession = nil
 
 	return nil
 }

@@ -9,7 +9,7 @@ type deviceStulz struct {
 
 // Get running software version
 func (sd *deviceStulz) SwVersion() (string, error) {
-	if strings.HasSuffix(sd.sysobjectid, ".29462.10") {
+	if strings.HasSuffix(sd.sysObjectId, ".29462.10") {
 		oid := ".1.3.6.1.4.1.29462.10.1.1.1.65540.0"
 		r, err := sd.getone(oid)
 		return r[oid].OctetString, err

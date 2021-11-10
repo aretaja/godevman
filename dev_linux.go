@@ -11,7 +11,7 @@ type deviceLinux struct {
 func (sd *deviceLinux) SwVersion() (string, error) {
 	// find index for kernel uname if any (must be configured in device snmpd.conf)
 	oid := ".1.3.6.1.4.1.8072.1.3.2.2.1.2"
-	r, err := sd.snmpsession.Walk(oid, true, true)
+	r, err := sd.snmpSession.Walk(oid, true, true)
 	if err != nil && sd.handleErr(oid, err) {
 		return "", err
 	}

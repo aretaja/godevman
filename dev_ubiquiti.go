@@ -57,7 +57,7 @@ func (sd *deviceUbiquiti) WebAuth(userPass []string) error {
 		}
 	}
 
-	sd.websession.client = client
+	sd.webSession.client = client
 
 	return nil
 }
@@ -65,11 +65,11 @@ func (sd *deviceUbiquiti) WebAuth(userPass []string) error {
 // Logout via web API and delete web session from deviceUbiquiti.websession.
 // Use this after use of methods which are accessing restricted device web API.
 func (sd *deviceUbiquiti) WebLogout() error {
-	if sd.websession == nil {
+	if sd.webSession == nil {
 		return nil
 	}
 
-	res, err := sd.websession.client.Post("https://"+sd.ip+"/api/v1.0/user/logout", "application/json", nil)
+	res, err := sd.webSession.client.Post("https://"+sd.ip+"/api/v1.0/user/logout", "application/json", nil)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (sd *deviceUbiquiti) WebLogout() error {
 		return fmt.Errorf(msg)
 	}
 
-	sd.websession = nil
+	sd.webSession = nil
 
 	return nil
 }
