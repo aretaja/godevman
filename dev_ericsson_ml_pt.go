@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/PraserX/ipconv"
 )
@@ -409,4 +410,41 @@ func (sd *deviceEricssonMlPt) RlNbrInfo() (map[int]*map[string]string, error) {
 	}
 
 	return out, err
+}
+
+// Get Software version
+func (sd *deviceEricssonMlPt) SwVersion() (string, error) {
+	sw := "Na"
+	body, err := sd.WebApiGet("CATEGORY=JSONREQUEST&SOFTWARE")
+	if err != nil {
+		return sw, fmt.Errorf("get request from device api failed: %s", err)
+	}
+
+	type swInfo struct {
+		Software struct {
+			BRunningNR       string `json:"bRunningNR"`
+			BRunningRelease  string `json:"bRunningRelease"`
+			BRollbackNR      string `json:"bRollbackNR"`
+			BRollbackRelease string `json:"bRollbackRelease"`
+			TActivationTime  int    `json:"tActivationTime"`
+			TDownloadTime    int    `json:"tDownloadTime"`
+			EStatus          int    `json:"eStatus"`
+			TStatusTimestamp int    `json:"tStatusTimestamp"`
+			BProgress        int    `json:"bProgress"`
+			BLastLogEntry    int    `json:"bLastLogEntry"`
+		} `json:"SOFTWARE"`
+	}
+
+	info := &swInfo{}
+	err = json.Unmarshal(body, info)
+	if err != nil {
+		return sw, fmt.Errorf("unmarshal software info failed: %s", err)
+	}
+
+	if info == nil {
+		return sw, fmt.Errorf("no software info")
+	}
+
+	sw = strings.TrimSuffix(info.Software.BRunningNR, ".def")
+	return sw, err
 }
