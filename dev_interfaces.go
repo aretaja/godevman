@@ -73,3 +73,8 @@ type DevWebSess interface {
 type DevRlNbr interface {
 	RlNbrInfo() (map[int]*map[string]string, error)
 }
+
+// Get backup info
+type DevBackupInfo interface {
+	LastBackup() (backupInfo, error)
+}

@@ -344,3 +344,10 @@ type ipIfInfo struct {
 	Descr, Alias string
 	ipInfo
 }
+
+// last backup info
+type backupInfo struct {
+	TargetIP, TargetFile string
+	Timestamp, Progress  int
+	Success              bool
+}

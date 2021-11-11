@@ -448,3 +448,68 @@ func (sd *deviceEricssonMlPt) SwVersion() (string, error) {
 	sw = strings.TrimSuffix(info.Software.BRunningNR, ".def")
 	return sw, err
 }
+
+// Get last backup info
+func (sd *deviceEricssonMlPt) LastBackup() (backupInfo, error) {
+	out := backupInfo{}
+	if err := sd.WebAuth(sd.webSession.cred); err != nil {
+		return out, fmt.Errorf("error: WebAuth - %s", err)
+	}
+
+	body, err := sd.WebApiGet("CATEGORY=JSONREQUEST&CDB")
+	if err != nil {
+		return out, fmt.Errorf("get request from device api failed: %s", err)
+	}
+
+	err = sd.WebLogout()
+	if err != nil {
+		return out, fmt.Errorf("errors: WebLogout - %s", err)
+	}
+
+	// Last backup info provided by MINI-LINK PT web API
+	type lastBackup struct {
+		Cdb struct {
+			I6LastRestoreServerIPV6 string `json:"i6LastRestoreServerIPV6"`
+			BLastBackUpFile         string `json:"bLastBackUpFile"`
+			I6LastBackUpServerIPV6  string `json:"i6LastBackUpServerIPV6"`
+			TLastBackUpTime         int    `json:"tLastBackUpTime"`
+			ILastBackUpServer       int    `json:"iLastBackUpServer"`
+			TLastRestoreTime        int    `json:"tLastRestoreTime"`
+			TLastChangeTime         int    `json:"tLastChangeTime"`
+			EStatus                 int    `json:"eStatus"`
+			TStatusTimestamp        int    `json:"tStatusTimestamp"`
+			BProgress               int    `json:"bProgress"`
+			EAutomaticRollback      int    `json:"eAutomaticRollback"`
+			TPendingRollback        int    `json:"tPendingRollback"`
+		} `json:"CDB"`
+	}
+
+	info := &lastBackup{}
+	err = json.Unmarshal(body, info)
+	if err != nil {
+		return out, fmt.Errorf("unmarshal backup info failed: %s", err)
+	}
+
+	if info == nil {
+		return out, fmt.Errorf("no backup info")
+	}
+
+	ip := ipconv.IntToIPv4(uint32(info.Cdb.ILastBackUpServer))
+
+	// Reverse ip slice
+	for i, j := 0, len(ip)-1; i < j; i, j = i+1, j-1 {
+		ip[i], ip[j] = ip[j], ip[i]
+	}
+
+	if info.Cdb.TLastBackUpTime > 0 {
+		out.TargetIP = ip.String()
+		out.TargetFile = info.Cdb.BLastBackUpFile
+		out.Timestamp = info.Cdb.TLastBackUpTime
+		out.Progress = info.Cdb.BProgress
+		if info.Cdb.EStatus == 7 {
+			out.Success = true
+		}
+	}
+
+	return out, err
+}
