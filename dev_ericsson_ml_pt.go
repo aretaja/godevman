@@ -261,11 +261,114 @@ func (sd *deviceEricssonMlPt) OspfNbrStatus() (map[string]string, error) {
 	return out, err
 }
 
+// Get Software version
+func (sd *deviceEricssonMlPt) SwVersion() (string, error) {
+	sw := "Na"
+	body, err := sd.WebApiGet("CATEGORY=JSONREQUEST&SOFTWARE")
+	if err != nil {
+		return sw, fmt.Errorf("get request from device api failed: %s", err)
+	}
+
+	type swInfo struct {
+		Software struct {
+			BRunningNR       string `json:"bRunningNR"`
+			BRunningRelease  string `json:"bRunningRelease"`
+			BRollbackNR      string `json:"bRollbackNR"`
+			BRollbackRelease string `json:"bRollbackRelease"`
+			TActivationTime  int    `json:"tActivationTime"`
+			TDownloadTime    int    `json:"tDownloadTime"`
+			EStatus          int    `json:"eStatus"`
+			TStatusTimestamp int    `json:"tStatusTimestamp"`
+			BProgress        int    `json:"bProgress"`
+			BLastLogEntry    int    `json:"bLastLogEntry"`
+		} `json:"SOFTWARE"`
+	}
+
+	info := &swInfo{}
+	err = json.Unmarshal(body, info)
+	if err != nil {
+		return sw, fmt.Errorf("unmarshal software info failed: %s", err)
+	}
+
+	if info == nil {
+		return sw, fmt.Errorf("no software info")
+	}
+
+	sw = strings.TrimSuffix(info.Software.BRunningNR, ".def")
+	return sw, err
+}
+
+// Get last backup info
+func (sd *deviceEricssonMlPt) LastBackup() (backupInfo, error) {
+	out := backupInfo{}
+	if err := sd.WebAuth(sd.webSession.cred); err != nil {
+		return out, fmt.Errorf("error: WebAuth - %s", err)
+	}
+
+	body, err := sd.WebApiGet("CATEGORY=JSONREQUEST&CDB")
+	if err != nil {
+		return out, fmt.Errorf("get request from device api failed: %s", err)
+	}
+
+	err = sd.WebLogout()
+	if err != nil {
+		return out, fmt.Errorf("errors: WebLogout - %s", err)
+	}
+
+	// Last backup info provided by MINI-LINK PT web API
+	type lastBackup struct {
+		Cdb struct {
+			I6LastRestoreServerIPV6 string `json:"i6LastRestoreServerIPV6"`
+			BLastBackUpFile         string `json:"bLastBackUpFile"`
+			I6LastBackUpServerIPV6  string `json:"i6LastBackUpServerIPV6"`
+			TLastBackUpTime         int    `json:"tLastBackUpTime"`
+			ILastBackUpServer       int    `json:"iLastBackUpServer"`
+			TLastRestoreTime        int    `json:"tLastRestoreTime"`
+			TLastChangeTime         int    `json:"tLastChangeTime"`
+			EStatus                 int    `json:"eStatus"`
+			TStatusTimestamp        int    `json:"tStatusTimestamp"`
+			BProgress               int    `json:"bProgress"`
+			EAutomaticRollback      int    `json:"eAutomaticRollback"`
+			TPendingRollback        int    `json:"tPendingRollback"`
+		} `json:"CDB"`
+	}
+
+	info := &lastBackup{}
+	err = json.Unmarshal(body, info)
+	if err != nil {
+		return out, fmt.Errorf("unmarshal backup info failed: %s", err)
+	}
+
+	if info == nil {
+		return out, fmt.Errorf("no backup info")
+	}
+
+	ip := ipconv.IntToIPv4(uint32(info.Cdb.ILastBackUpServer))
+
+	// Reverse ip slice
+	for i, j := 0, len(ip)-1; i < j; i, j = i+1, j-1 {
+		ip[i], ip[j] = ip[j], ip[i]
+	}
+
+	if info.Cdb.TLastBackUpTime > 0 {
+		out.TargetIP = ip.String()
+		out.TargetFile = info.Cdb.BLastBackUpFile
+		out.Timestamp = info.Cdb.TLastBackUpTime
+		out.Progress = info.Cdb.BProgress
+		if info.Cdb.EStatus == 7 {
+			out.Success = true
+		}
+	}
+
+	return out, err
+}
+
 // Get RL neighbour info
-func (sd *deviceEricssonMlPt) RlNbrInfo() (map[int]*map[string]string, error) {
+func (sd *deviceEricssonMlPt) RlNbrInfo() (rlRadioFeInfo, error) {
+	out := rlRadioFeInfo{}
 	body, err := sd.WebApiGet("CATEGORY=JSONREQUEST&FE_STATUS_VIEW")
 	if err != nil {
-		return nil, fmt.Errorf("get request from device api failed: %s", err)
+		return out, fmt.Errorf("get request from device api failed: %s", err)
 	}
 
 	type feRlInfo struct {
@@ -385,11 +488,11 @@ func (sd *deviceEricssonMlPt) RlNbrInfo() (map[int]*map[string]string, error) {
 	info := &feRlInfo{}
 	err = json.Unmarshal(body, info)
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal fe rl info failed: %s", err)
+		return out, fmt.Errorf("unmarshal fe rl info failed: %s", err)
 	}
 
 	if info == nil {
-		return nil, fmt.Errorf("no fe rl info")
+		return out, fmt.Errorf("no fe rl info")
 	}
 
 	ip := ipconv.IntToIPv4(uint32(info.FeStatusView.RadioLinkTerminal.INeIPAddress))
@@ -399,117 +502,41 @@ func (sd *deviceEricssonMlPt) RlNbrInfo() (map[int]*map[string]string, error) {
 		ip[i], ip[j] = ip[j], ip[i]
 	}
 
-	out := map[int]*map[string]string{
-		0: {
-			"sysName":    info.FeStatusView.RadioLinkTerminal.BNeName,
-			"powerOut":   info.FeStatusView.CtActive.BActualOutputPower,
-			"powerIn":    info.FeStatusView.CtActive.BActualInputPower,
-			"txCapacity": fmt.Sprintf("%d", info.FeStatusView.CtActive.LActualTxCapacity*1000),
-			"ip":         ip.String(),
+	ifDscr := info.FeStatusView.RadioLinkTerminal.BDistinguishedName
+	feInfo := rlRadioFeIfInfo{
+		SysName: valString{
+			Value: info.FeStatusView.RadioLinkTerminal.BNeName,
+			IsSet: true,
+		},
+		Ip: valString{
+			Value: ip.String(),
+			IsSet: true,
+		},
+		TxCapacity: valInt{
+			Value: info.FeStatusView.CtActive.LActualTxCapacity * 1000,
+			IsSet: true,
 		},
 	}
 
+	if v, err := strconv.ParseFloat(info.FeStatusView.CtActive.BActualInputPower, 64); err == nil {
+		feInfo.PowerIn.Value = v
+		feInfo.PowerIn.IsSet = true
+	}
+
+	if v, err := strconv.ParseFloat(info.FeStatusView.CtActive.BActualOutputPower, 64); err == nil {
+		feInfo.PowerOut.Value = v
+		feInfo.PowerOut.IsSet = true
+	}
+
+	out.Neighbrs = make(map[string]rlRadioFeIfInfo)
+	out.Neighbrs[ifDscr] = feInfo
+
 	return out, err
 }
 
-// Get Software version
-func (sd *deviceEricssonMlPt) SwVersion() (string, error) {
-	sw := "Na"
-	body, err := sd.WebApiGet("CATEGORY=JSONREQUEST&SOFTWARE")
-	if err != nil {
-		return sw, fmt.Errorf("get request from device api failed: %s", err)
-	}
+// Get RL neighbour info
+func (sd *deviceEricssonMlPt) RlInfo() (rlRadioInfo, error) {
+	out := rlRadioInfo{}
 
-	type swInfo struct {
-		Software struct {
-			BRunningNR       string `json:"bRunningNR"`
-			BRunningRelease  string `json:"bRunningRelease"`
-			BRollbackNR      string `json:"bRollbackNR"`
-			BRollbackRelease string `json:"bRollbackRelease"`
-			TActivationTime  int    `json:"tActivationTime"`
-			TDownloadTime    int    `json:"tDownloadTime"`
-			EStatus          int    `json:"eStatus"`
-			TStatusTimestamp int    `json:"tStatusTimestamp"`
-			BProgress        int    `json:"bProgress"`
-			BLastLogEntry    int    `json:"bLastLogEntry"`
-		} `json:"SOFTWARE"`
-	}
-
-	info := &swInfo{}
-	err = json.Unmarshal(body, info)
-	if err != nil {
-		return sw, fmt.Errorf("unmarshal software info failed: %s", err)
-	}
-
-	if info == nil {
-		return sw, fmt.Errorf("no software info")
-	}
-
-	sw = strings.TrimSuffix(info.Software.BRunningNR, ".def")
-	return sw, err
-}
-
-// Get last backup info
-func (sd *deviceEricssonMlPt) LastBackup() (backupInfo, error) {
-	out := backupInfo{}
-	if err := sd.WebAuth(sd.webSession.cred); err != nil {
-		return out, fmt.Errorf("error: WebAuth - %s", err)
-	}
-
-	body, err := sd.WebApiGet("CATEGORY=JSONREQUEST&CDB")
-	if err != nil {
-		return out, fmt.Errorf("get request from device api failed: %s", err)
-	}
-
-	err = sd.WebLogout()
-	if err != nil {
-		return out, fmt.Errorf("errors: WebLogout - %s", err)
-	}
-
-	// Last backup info provided by MINI-LINK PT web API
-	type lastBackup struct {
-		Cdb struct {
-			I6LastRestoreServerIPV6 string `json:"i6LastRestoreServerIPV6"`
-			BLastBackUpFile         string `json:"bLastBackUpFile"`
-			I6LastBackUpServerIPV6  string `json:"i6LastBackUpServerIPV6"`
-			TLastBackUpTime         int    `json:"tLastBackUpTime"`
-			ILastBackUpServer       int    `json:"iLastBackUpServer"`
-			TLastRestoreTime        int    `json:"tLastRestoreTime"`
-			TLastChangeTime         int    `json:"tLastChangeTime"`
-			EStatus                 int    `json:"eStatus"`
-			TStatusTimestamp        int    `json:"tStatusTimestamp"`
-			BProgress               int    `json:"bProgress"`
-			EAutomaticRollback      int    `json:"eAutomaticRollback"`
-			TPendingRollback        int    `json:"tPendingRollback"`
-		} `json:"CDB"`
-	}
-
-	info := &lastBackup{}
-	err = json.Unmarshal(body, info)
-	if err != nil {
-		return out, fmt.Errorf("unmarshal backup info failed: %s", err)
-	}
-
-	if info == nil {
-		return out, fmt.Errorf("no backup info")
-	}
-
-	ip := ipconv.IntToIPv4(uint32(info.Cdb.ILastBackUpServer))
-
-	// Reverse ip slice
-	for i, j := 0, len(ip)-1; i < j; i, j = i+1, j-1 {
-		ip[i], ip[j] = ip[j], ip[i]
-	}
-
-	if info.Cdb.TLastBackUpTime > 0 {
-		out.TargetIP = ip.String()
-		out.TargetFile = info.Cdb.BLastBackUpFile
-		out.Timestamp = info.Cdb.TLastBackUpTime
-		out.Progress = info.Cdb.BProgress
-		if info.Cdb.EStatus == 7 {
-			out.Success = true
-		}
-	}
-
-	return out, err
+	return out, nil
 }

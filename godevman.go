@@ -278,13 +278,28 @@ func (d *device) Morph() interface{} {
 // Common types for unified device info
 
 // Common types for collected values
-type valString struct {
-	Value string
+type valBool struct {
+	Value bool
+	IsSet bool
+}
+
+type valF64 struct {
+	Value float64
+	IsSet bool
+}
+
+type valInt struct {
+	Value int
 	IsSet bool
 }
 
 type valI64 struct {
 	Value int64
+	IsSet bool
+}
+
+type valString struct {
+	Value string
 	IsSet bool
 }
 
@@ -350,4 +365,56 @@ type backupInfo struct {
 	TargetIP, TargetFile string
 	Timestamp, Progress  int
 	Success              bool
+}
+
+// Radiolink radio interface info
+type rlRadioIfInfo struct {
+	Rau map[string]struct {
+		Rf map[string]struct {
+			Name       valString
+			Descr      valString
+			Mute       valBool
+			IfIdx      valInt
+			EntityIdx  valInt
+			AdminStat  valInt
+			OperStat   valInt
+			TxCapacity valInt
+			PowerIn    valF64
+			PowerOut   valF64
+			Snr        valF64
+		}
+		Name      valString
+		Descr     valString
+		EntityIdx valInt
+		Temp      valF64
+	}
+	Name      valString
+	Descr     valString
+	IfIdx     valInt
+	EntityIdx valInt
+	AdmStat   valInt
+	OperStat  valInt
+	Es        valInt
+	Uas       valInt
+}
+
+// Radiolink radio info
+type rlRadioInfo struct {
+	Interfaces map[string]rlRadioIfInfo
+}
+
+// Radiolink FarEnd radio interface info
+type rlRadioFeIfInfo struct {
+	SysName    valString
+	Ip         valString
+	IfIdx      valInt
+	EntityIdx  valInt
+	TxCapacity valInt
+	PowerIn    valF64
+	PowerOut   valF64
+}
+
+// Radiolink radio info
+type rlRadioFeInfo struct {
+	Neighbrs map[string]rlRadioFeIfInfo
 }
