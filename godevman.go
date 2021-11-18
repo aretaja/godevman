@@ -368,41 +368,45 @@ type backupInfo struct {
 }
 
 // Radiolink radio interface info
-type rlRadioIfInfo struct {
-	Rau map[string]struct {
-		Rf map[string]struct {
-			Name       valString
-			Descr      valString
-			Mute       valBool
-			IfIdx      valInt
-			EntityIdx  valInt
-			AdminStat  valInt
-			OperStat   valInt
-			TxCapacity valInt
-			PowerIn    valF64
-			PowerOut   valF64
-			Snr        valF64
-		}
-		Name      valString
-		Descr     valString
-		EntityIdx valInt
-		Temp      valF64
-	}
+type rfInfo struct {
+	Name       valString
+	Descr      valString
+	Status     valString
+	Mute       valBool
+	IfIdx      valInt
+	EntityIdx  valInt
+	TxCapacity valInt
+	PowerIn    valF64
+	PowerOut   valF64
+	Snr        valF64
+}
+
+type rauInfo struct {
+	Rf        map[string]*rfInfo
 	Name      valString
 	Descr     valString
+	EntityIdx valInt
+	Temp      valF64
+}
+
+type rlRadioIfInfo struct {
+	Rau       map[string]*rauInfo
+	Name      valString
+	Descr     valString
+	AdmStat   valString
+	OperStat  valString
 	IfIdx     valInt
 	EntityIdx valInt
-	AdmStat   valInt
-	OperStat  valInt
 	Es        valInt
 	Uas       valInt
 }
 
+/*
 // Radiolink radio info
 type rlRadioInfo struct {
 	Interfaces map[string]rlRadioIfInfo
 }
-
+*/
 // Radiolink FarEnd radio interface info
 type rlRadioFeIfInfo struct {
 	SysName    valString

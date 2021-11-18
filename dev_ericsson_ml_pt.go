@@ -53,6 +53,172 @@ func (sd *deviceEricssonMlPt) IpIfInfo(ip ...string) (map[string]*ipIfInfo, erro
 	return out, err
 }
 
+// Get RL info
+func (sd *deviceEricssonMlPt) RlInfo() (map[string]*rlRadioIfInfo, error) {
+	out := make(map[string]*rlRadioIfInfo)
+
+	ctTable := ".1.3.6.1.4.1.193.223.2.7.1.1."
+	rltTable := ".1.3.6.1.4.1.193.223.2.7.3.1."
+	perfTable := ".1.3.6.1.4.1.193.223.2.7.4.1.1."
+	tempOid := ".1.3.6.1.4.1.193.223.2.4.1.1.2.1"
+
+	// Get CD and RLT ifdescr
+	descrOids := []string{ctTable + "5", rltTable + "1"}
+
+	ctDescr := make(map[string]string)
+	rltDescr := make(map[string]string)
+	for _, oid := range descrOids {
+		r, err := sd.getmulti(oid, nil)
+		if err != nil {
+			return out, err
+		}
+
+		for o, d := range r {
+			switch {
+			case strings.Contains(o, ctTable+"5."):
+				i := strings.TrimPrefix(o, ctTable+"5.")
+				ctDescr[i] = d.OctetString
+			case strings.Contains(o, rltTable+"1."):
+				i := strings.TrimPrefix(o, rltTable+"1.")
+				rltDescr[i] = d.OctetString
+			}
+		}
+	}
+
+	oids := []string{tempOid}
+	for i := range ctDescr {
+		oids = append(oids,
+			ctTable+"1."+i, ctTable+"2."+i, ctTable+"6."+i, ctTable+"8."+i, ctTable+"25."+i,
+			ctTable+"26."+i, ctTable+"43."+i, ctTable+"46."+i, perfTable+"4."+i, perfTable+"9."+i,
+		)
+	}
+
+	for i := range rltDescr {
+		oids = append(oids, rltTable+"7."+i)
+	}
+
+	r, err := sd.snmpSession.Get(oids)
+	if err != nil {
+		return out, err
+	}
+
+	rltStatus := map[int64]string{
+		1: "Down",
+		2: "Up",
+		3: "Na",
+		4: "Unkn",
+		5: "Degraded",
+	}
+
+	opStatus := map[int64]string{
+		1: "Unkn",
+		2: "Off",
+		3: "On",
+		4: "Standby",
+	}
+
+	var temp valF64
+	if v, ok := r[tempOid]; ok {
+		t := strings.TrimSuffix(v.OctetString, " C")
+		if s, err := strconv.ParseFloat(t, 64); err == nil {
+			temp.Value = s
+			temp.IsSet = true
+		}
+	}
+
+	for idx, rd := range rltDescr {
+		i := new(rlRadioIfInfo)
+		i.Rau = make(map[string]*rauInfo)
+		i.Descr.Value = rd
+		i.Descr.IsSet = true
+		if s, err := strconv.Atoi(idx); err == nil {
+			i.IfIdx.Value = s
+			i.IfIdx.IsSet = true
+		}
+		if v, ok := r[rltTable+"7."+idx]; ok {
+			if s, ok := rltStatus[v.Integer]; ok {
+				i.OperStat.Value = s
+				i.OperStat.IsSet = true
+			}
+		}
+
+		for cIdx, cd := range ctDescr {
+			rf := new(rfInfo)
+			rf.Descr.Value = cd
+			rf.Descr.IsSet = true
+			if s, err := strconv.Atoi(cIdx); err == nil {
+				rf.IfIdx.Value = s
+				rf.IfIdx.IsSet = true
+			}
+
+			rau := new(rauInfo)
+			rau.Descr.Value = rd
+			rau.Descr.IsSet = true
+			rau.Temp = temp
+			rau.Rf = make(map[string]*rfInfo)
+
+			rau.Rf[cd] = rf
+			if v, ok := r[ctTable+"1."+cIdx]; ok {
+				if s, err := strconv.ParseFloat(v.OctetString, 64); err == nil {
+					rf.PowerIn.Value = s
+					rf.PowerIn.IsSet = true
+				}
+			}
+			if v, ok := r[ctTable+"2."+cIdx]; ok {
+				if s, err := strconv.ParseFloat(v.OctetString, 64); err == nil {
+					rf.PowerOut.Value = s
+					rf.PowerOut.IsSet = true
+				}
+			}
+			if v, ok := r[ctTable+"6."+cIdx]; ok {
+				rf.Name.Value = v.OctetString
+				rf.Name.IsSet = true
+			}
+			if v, ok := r[ctTable+"25."+cIdx]; ok {
+				if s, ok := opStatus[v.Integer]; ok {
+					rf.Status.Value = s
+					rf.Status.IsSet = true
+				}
+			}
+			if v, ok := r[ctTable+"26."+cIdx]; ok {
+				if v.Integer == 1 {
+					rf.Mute.Value = true
+				}
+				rf.Mute.IsSet = true
+			}
+			if v, ok := r[ctTable+"43."+cIdx]; ok {
+				if s, err := strconv.ParseFloat(v.OctetString, 64); err == nil {
+					rf.Snr.Value = s
+					rf.Snr.IsSet = true
+				}
+			}
+			if v, ok := r[ctTable+"46."+cIdx]; ok {
+				rf.TxCapacity.Value = int(v.Integer) * 1000
+				rf.TxCapacity.IsSet = true
+			}
+			// Return error counters only if carrier is in up or degraded state
+			if v, ok := r[ctTable+"8."+cIdx]; ok {
+				if v.Integer == 2 || v.Integer == 5 {
+					if cv, ok := r[perfTable+"4."+cIdx]; ok {
+						i.Es.Value = int(cv.Integer)
+						i.Es.IsSet = true
+					}
+					if cv, ok := r[perfTable+"9."+cIdx]; ok {
+						i.Uas.Value = int(cv.Integer)
+						i.Uas.IsSet = true
+					}
+				}
+			}
+
+			i.Rau[cd] = rau
+		}
+
+		out[rd] = i
+	}
+
+	return out, nil
+}
+
 // Make http Get request and return byte slice of body.
 // Argument string should contain request parameters.
 func (sd *deviceEricssonMlPt) WebApiGet(params string) ([]byte, error) {
@@ -532,11 +698,4 @@ func (sd *deviceEricssonMlPt) RlNbrInfo() (rlRadioFeInfo, error) {
 	out.Neighbrs[ifDscr] = feInfo
 
 	return out, err
-}
-
-// Get RL neighbour info
-func (sd *deviceEricssonMlPt) RlInfo() (rlRadioInfo, error) {
-	out := rlRadioInfo{}
-
-	return out, nil
 }
