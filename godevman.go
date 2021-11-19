@@ -405,10 +405,10 @@ type rlRadioIfInfo struct {
 type rlRadioFeIfInfo struct {
 	SysName    valString
 	Ip         valString
+	FeIfDescr  valString
 	IfIdx      valInt
 	FeIfIdx    valInt
 	EntityIdx  valInt
-	FeIfDescr  valString
 	TxCapacity valInt
 	PowerIn    valF64
 	PowerOut   valF64
