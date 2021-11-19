@@ -465,20 +465,19 @@ func (sd *deviceEricssonMlPt) SwVersion() (string, error) {
 }
 
 // Get last backup info
-func (sd *deviceEricssonMlPt) LastBackup() (backupInfo, error) {
-	out := backupInfo{}
+func (sd *deviceEricssonMlPt) LastBackup() (*backupInfo, error) {
 	if err := sd.WebAuth(sd.webSession.cred); err != nil {
-		return out, fmt.Errorf("error: WebAuth - %s", err)
+		return nil, fmt.Errorf("error: WebAuth - %s", err)
 	}
 
 	body, err := sd.WebApiGet("CATEGORY=JSONREQUEST&CDB")
 	if err != nil {
-		return out, fmt.Errorf("get request from device api failed: %s", err)
+		return nil, fmt.Errorf("get request from device api failed: %s", err)
 	}
 
 	err = sd.WebLogout()
 	if err != nil {
-		return out, fmt.Errorf("errors: WebLogout - %s", err)
+		return nil, fmt.Errorf("errors: WebLogout - %s", err)
 	}
 
 	// Last backup info provided by MINI-LINK PT web API
@@ -502,11 +501,11 @@ func (sd *deviceEricssonMlPt) LastBackup() (backupInfo, error) {
 	info := &lastBackup{}
 	err = json.Unmarshal(body, info)
 	if err != nil {
-		return out, fmt.Errorf("unmarshal backup info failed: %s", err)
+		return nil, fmt.Errorf("unmarshal backup info failed: %s", err)
 	}
 
 	if info == nil {
-		return out, fmt.Errorf("no backup info")
+		return nil, fmt.Errorf("no backup info")
 	}
 
 	ip := ipconv.IntToIPv4(uint32(info.Cdb.ILastBackUpServer))
@@ -516,6 +515,7 @@ func (sd *deviceEricssonMlPt) LastBackup() (backupInfo, error) {
 		ip[i], ip[j] = ip[j], ip[i]
 	}
 
+	out := new(backupInfo)
 	if info.Cdb.TLastBackUpTime > 0 {
 		out.TargetIP = ip.String()
 		out.TargetFile = info.Cdb.BLastBackUpFile

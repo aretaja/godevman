@@ -77,5 +77,5 @@ type DevRl interface {
 
 // Get backup info
 type DevBackupInfo interface {
-	LastBackup() (backupInfo, error)
+	LastBackup() (*backupInfo, error)
 }
