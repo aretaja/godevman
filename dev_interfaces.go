@@ -72,7 +72,7 @@ type DevWebSess interface {
 // Get RL neighbour info
 type DevRl interface {
 	RlInfo() (map[string]*rlRadioIfInfo, error)
-	RlNbrInfo() (rlRadioFeInfo, error)
+	RlNbrInfo() (map[string]*rlRadioFeIfInfo, error)
 }
 
 // Get backup info

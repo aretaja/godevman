@@ -401,24 +401,15 @@ type rlRadioIfInfo struct {
 	Uas       valInt
 }
 
-/*
-// Radiolink radio info
-type rlRadioInfo struct {
-	Interfaces map[string]rlRadioIfInfo
-}
-*/
 // Radiolink FarEnd radio interface info
 type rlRadioFeIfInfo struct {
 	SysName    valString
 	Ip         valString
 	IfIdx      valInt
+	FeIfIdx    valInt
 	EntityIdx  valInt
+	FeIfDescr  valString
 	TxCapacity valInt
 	PowerIn    valF64
 	PowerOut   valF64
-}
-
-// Radiolink radio info
-type rlRadioFeInfo struct {
-	Neighbrs map[string]rlRadioFeIfInfo
 }

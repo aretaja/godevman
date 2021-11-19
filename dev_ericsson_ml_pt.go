@@ -53,7 +53,7 @@ func (sd *deviceEricssonMlPt) IpIfInfo(ip ...string) (map[string]*ipIfInfo, erro
 	return out, err
 }
 
-// Get RL info
+// Get RL info (map keys are radio ifdescriptions)
 func (sd *deviceEricssonMlPt) RlInfo() (map[string]*rlRadioIfInfo, error) {
 	out := make(map[string]*rlRadioIfInfo)
 
@@ -529,12 +529,13 @@ func (sd *deviceEricssonMlPt) LastBackup() (backupInfo, error) {
 	return out, err
 }
 
-// Get RL neighbour info
-func (sd *deviceEricssonMlPt) RlNbrInfo() (rlRadioFeInfo, error) {
-	out := rlRadioFeInfo{}
+// Get RL neighbour info (map keys are local ifdescriptions or "0" for PtP links)
+func (sd *deviceEricssonMlPt) RlNbrInfo() (map[string]*rlRadioFeIfInfo, error) {
+	res := new(rlRadioFeIfInfo)
+
 	body, err := sd.WebApiGet("CATEGORY=JSONREQUEST&FE_STATUS_VIEW")
 	if err != nil {
-		return out, fmt.Errorf("get request from device api failed: %s", err)
+		return nil, fmt.Errorf("get request from device api failed: %s", err)
 	}
 
 	type feRlInfo struct {
@@ -654,11 +655,11 @@ func (sd *deviceEricssonMlPt) RlNbrInfo() (rlRadioFeInfo, error) {
 	info := &feRlInfo{}
 	err = json.Unmarshal(body, info)
 	if err != nil {
-		return out, fmt.Errorf("unmarshal fe rl info failed: %s", err)
+		return nil, fmt.Errorf("unmarshal fe rl info failed: %s", err)
 	}
 
 	if info == nil {
-		return out, fmt.Errorf("no fe rl info")
+		return nil, fmt.Errorf("no fe rl info")
 	}
 
 	ip := ipconv.IntToIPv4(uint32(info.FeStatusView.RadioLinkTerminal.INeIPAddress))
@@ -668,34 +669,33 @@ func (sd *deviceEricssonMlPt) RlNbrInfo() (rlRadioFeInfo, error) {
 		ip[i], ip[j] = ip[j], ip[i]
 	}
 
-	ifDscr := info.FeStatusView.RadioLinkTerminal.BDistinguishedName
-	feInfo := rlRadioFeIfInfo{
-		SysName: valString{
-			Value: info.FeStatusView.RadioLinkTerminal.BNeName,
-			IsSet: true,
-		},
-		Ip: valString{
-			Value: ip.String(),
-			IsSet: true,
-		},
-		TxCapacity: valInt{
-			Value: info.FeStatusView.CtActive.LActualTxCapacity * 1000,
-			IsSet: true,
-		},
+	res.FeIfDescr = valString{
+		Value: info.FeStatusView.RadioLinkTerminal.BDistinguishedName,
+		IsSet: true,
+	}
+	res.SysName = valString{
+		Value: info.FeStatusView.RadioLinkTerminal.BNeName,
+		IsSet: true,
+	}
+	res.Ip = valString{
+		Value: ip.String(),
+		IsSet: true,
+	}
+	res.TxCapacity = valInt{
+		Value: info.FeStatusView.CtActive.LActualTxCapacity * 1000,
+		IsSet: true,
 	}
 
 	if v, err := strconv.ParseFloat(info.FeStatusView.CtActive.BActualInputPower, 64); err == nil {
-		feInfo.PowerIn.Value = v
-		feInfo.PowerIn.IsSet = true
+		res.PowerIn.Value = v
+		res.PowerIn.IsSet = true
 	}
 
 	if v, err := strconv.ParseFloat(info.FeStatusView.CtActive.BActualOutputPower, 64); err == nil {
-		feInfo.PowerOut.Value = v
-		feInfo.PowerOut.IsSet = true
+		res.PowerOut.Value = v
+		res.PowerOut.IsSet = true
 	}
 
-	out.Neighbrs = make(map[string]rlRadioFeIfInfo)
-	out.Neighbrs[ifDscr] = feInfo
-
+	out := map[string]*rlRadioFeIfInfo{"0": res}
 	return out, err
 }
