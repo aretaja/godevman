@@ -235,7 +235,7 @@ func (sd *deviceUbiquiti) WebLogout() error {
 }
 
 // Get all OLT interface info via web API.
-func (sd *deviceUbiquiti) OltIfInfo() (*UbiOltInterfaces, error) {
+func (sd *deviceUbiquiti) oltIfInfo() (*UbiOltInterfaces, error) {
 	if err := sd.WebAuth(sd.webSession.cred); err != nil {
 		return nil, fmt.Errorf("error: WebAuth - %s", err)
 	}
@@ -264,7 +264,7 @@ func (sd *deviceUbiquiti) OltIfInfo() (*UbiOltInterfaces, error) {
 }
 
 // Get all OLT statistics via web API.
-func (sd *deviceUbiquiti) OltStatistics() (*UbiOltStatistics, error) {
+func (sd *deviceUbiquiti) oltStatistics() (*UbiOltStatistics, error) {
 	if err := sd.WebAuth(sd.webSession.cred); err != nil {
 		return nil, fmt.Errorf("error: WebAuth - %s", err)
 	}
@@ -414,7 +414,7 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 	}
 
 	if rSrc["interfaces"] {
-		r, err := sd.OltIfInfo()
+		r, err := sd.oltIfInfo()
 		if err != nil {
 			return out, err
 		}
@@ -423,7 +423,7 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 	}
 
 	if rSrc["statistics"] {
-		r, err := sd.OltStatistics()
+		r, err := sd.oltStatistics()
 		if err != nil {
 			return out, err
 		}
