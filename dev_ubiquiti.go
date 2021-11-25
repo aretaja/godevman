@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -136,7 +137,7 @@ func (sd *deviceUbiquiti) IfNumber() (int64, error) {
 	return out, nil
 }
 
-// Make http Get request and return byte slice of body.
+// Make http GET request and return byte slice of body.
 // Argument string should contain request parameters.
 func (sd *deviceUbiquiti) WebApiGet(params string) ([]byte, error) {
 	client := sd.webSession.client
@@ -165,6 +166,68 @@ func (sd *deviceUbiquiti) WebApiGet(params string) ([]byte, error) {
 	return body, nil
 }
 
+// Make http POST request and return byte slice of body.
+// Argument string should contain request parameters.
+func (sd *deviceUbiquiti) WebApiPost(target string, jsonData []byte) ([]byte, error) {
+	client := sd.webSession.client
+	if sd.webSession.client == nil {
+		// setup client
+		c, err := sd.webClient(nil)
+		if err != nil {
+			return nil, err
+		}
+		client = c
+	}
+
+	baseUrl := "https://" + sd.ip + "/api/v1.0/"
+	res, err := client.Post(baseUrl+target, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	body, _ := ioutil.ReadAll(res.Body)
+
+	if res.StatusCode > 299 {
+		return body, fmt.Errorf("response failed with status code: %d", res.StatusCode)
+	}
+
+	return body, nil
+}
+
+// Make http PUT request and return byte slice of body.
+// Argument string should contain request parameters.
+func (sd *deviceUbiquiti) WebApiPut(target string, jsonData []byte) ([]byte, error) {
+	client := sd.webSession.client
+	if sd.webSession.client == nil {
+		// setup client
+		c, err := sd.webClient(nil)
+		if err != nil {
+			return nil, err
+		}
+		client = c
+	}
+
+	baseUrl := "https://" + sd.ip + "/api/v1.0/"
+	req, err := http.NewRequest(http.MethodPut, baseUrl+target, bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+
+	body, _ := ioutil.ReadAll(res.Body)
+
+	if res.StatusCode > 299 {
+		return body, fmt.Errorf("response failed with status code: %d", res.StatusCode)
+	}
+
+	return body, nil
+}
+
 // Login via web API and stores web session in deviceUbiquiti.websession.
 // Use this before use of methods which are accessing restricted device web API.
 func (sd *deviceUbiquiti) WebAuth(userPass []string) error {
@@ -177,13 +240,13 @@ func (sd *deviceUbiquiti) WebAuth(userPass []string) error {
 	baseUrl := "https://" + sd.ip + "/api/v1.0/user/login"
 	values := map[string]string{"username": userPass[0], "password": userPass[1]}
 
-	json_data, err := json.Marshal(values)
+	jsonData, err := json.Marshal(values)
 	if err != nil {
 		return err
 	}
 
 	// login
-	res, err := client.Post(baseUrl, "application/json", bytes.NewBuffer(json_data))
+	res, err := client.Post(baseUrl, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return err
 	}
