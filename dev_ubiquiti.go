@@ -122,6 +122,20 @@ func (sd *deviceUbiquiti) SwVersion() (string, error) {
 	return r[oid].OctetString, err
 }
 
+// Get ifNumber
+func (sd *deviceUbiquiti) IfNumber() (int64, error) {
+	var out int64
+	oid := ".1.3.6.1.4.1.41112.1.5.7.2.1.1"
+	r, err := sd.snmpSession.Walk(oid, true, true)
+	if err != nil && sd.handleErr(oid, err) {
+		return out, err
+	}
+
+	out = int64(len(r))
+
+	return out, nil
+}
+
 // Make http Get request and return byte slice of body.
 // Argument string should contain request parameters.
 func (sd *deviceUbiquiti) WebApiGet(params string) ([]byte, error) {
