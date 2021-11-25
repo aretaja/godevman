@@ -79,3 +79,9 @@ type DevRl interface {
 type DevBackupInfo interface {
 	LastBackup() (*backupInfo, error)
 }
+
+// Test interface
+// type DevTest interface {
+// 	OltIfInfo() (*UbiOltInterfaces, error)
+// 	OltStatistics() (*UbiOltStatistics, error)
+// }

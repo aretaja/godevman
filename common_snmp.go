@@ -93,7 +93,7 @@ func (sd *snmpCommon) IfNumber() (int64, error) {
 // Get info from .iso.org.dod.internet.mgmt.mib-2.interfaces.ifTable and .iso.org.dod.internet.mgmt.mib-2.ifMIB.ifMIBObjects.ifXTable
 // Valid targets values: "All", "AllNoIfx", "Descr", "Name", "Alias", "Type", "Mtu", "Speed", "Mac",
 // "Admin", "Oper", "Last", "InOctets", "InUcast", "InMcast", "InBcast", "InDiscards", "InErrors",
-// "OutOctets", "OutUcast", "OutMast", "OutBcast", "OutDiscards", "OutErrors"
+// "OutOctets", "OutUcast", "OutMcast", "OutBcast", "OutDiscards", "OutErrors"
 func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInfo, error) {
 	out := make(map[string]*ifInfo)
 	iftable := ".1.3.6.1.2.1.2.2.1."
@@ -314,8 +314,8 @@ func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInf
 				out[i].OutUcast.IsSet = true
 			case strings.Contains(o, ifxtable+"12."):
 				i := mapEntry(o, ifxtable+"12.")
-				out[i].OutMast.Value = d.Counter64
-				out[i].OutMast.IsSet = true
+				out[i].OutMcast.Value = d.Counter64
+				out[i].OutMcast.IsSet = true
 			case strings.Contains(o, ifxtable+"13."):
 				i := mapEntry(o, ifxtable+"13.")
 				out[i].OutBcast.Value = d.Counter64
