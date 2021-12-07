@@ -9,9 +9,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aretaja/snmphelper"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/patrickmn/go-cache"
 )
 
 // Version of release
@@ -46,11 +48,13 @@ type webSess struct {
 type device struct {
 	snmpSession *snmphelper.Session // snmp session of device
 	// clisession  devicecli.Dcli   // cli session of device
-	webSession  *webSess // web session of device
-	ip          string   // ip of device
-	sysName     string   // sysname of device
-	sysObjectId string   // sysObjectId of device
-	debug       int      // Debug level
+	webSession  *webSess     // web session of device
+	cache       *cache.Cache // Cache object
+	ip          string       // ip of device
+	sysName     string       // sysname of device
+	sysObjectId string       // sysObjectId of device
+	debug       int          // Debug level
+	useCache    bool         // Enable use of cache
 }
 
 // Initialize new device object
@@ -60,9 +64,8 @@ func NewDevice(p *Dparams) (*device, error) {
 	// ip is required
 	if net.ParseIP(p.Ip) == nil {
 		return nil, fmt.Errorf("ip is required for new device object initialization")
-	} else {
-		d.ip = p.Ip
 	}
+	d.ip = p.Ip
 
 	// Set Debug level if Env var is set
 	if l, set := os.LookupEnv("GODEVMAN_DEBUG"); set {
@@ -147,6 +150,10 @@ func NewDevice(p *Dparams) (*device, error) {
 
 		d.sysName = res[oids["sysname"]].OctetString
 	}
+
+	// Setup cache
+	d.cache = cache.New(10*time.Second, 10*time.Second)
+	d.useCache = true
 
 	// DEBUG
 	if d.debug > 0 {

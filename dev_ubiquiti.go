@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/aretaja/snmphelper"
+	"github.com/patrickmn/go-cache"
 )
 
 // Adds Ubiquiti specific SNMP functionality to snmpCommon type
@@ -18,44 +19,70 @@ type deviceUbiquiti struct {
 }
 
 // Ubiquiti specific OLT interface info type used by device web API
-type UbiOltInterfaces []struct {
-	Addresses      []interface{} `json:"addresses"`
-	Identification struct {
-		ID   string `json:"id"`
-		Mac  string `json:"mac"`
-		Name string `json:"name"`
-		Type string `json:"type"`
-	} `json:"identification,omitempty"`
-	Pon struct {
-		Sfp struct {
-			Los     interface{} `json:"los"`
-			Serial  interface{} `json:"serial"`
-			TxFault interface{} `json:"txFault"`
-			Part    string      `json:"part"`
-			Vendor  string      `json:"vendor"`
-			Present bool        `json:"present"`
-		} `json:"sfp"`
-	} `json:"pon,omitempty"`
-	Status struct {
-		CurrentSpeed string `json:"currentSpeed"`
-		Speed        string `json:"speed"`
-		Enabled      bool   `json:"enabled"`
-		Plugged      bool   `json:"plugged"`
-	} `json:"status,omitempty"`
-	Port struct {
-		Sfp struct {
-			Los     interface{} `json:"los"`
-			Serial  interface{} `json:"serial"`
-			TxFault interface{} `json:"txFault"`
-			Part    string      `json:"part"`
-			Vendor  string      `json:"vendor"`
-			Present bool        `json:"present"`
-		} `json:"sfp"`
-	} `json:"port,omitempty"`
-	Lag struct {
-		Interfaces []interface{} `json:"interfaces"`
-		Static     bool          `json:"static"`
-	} `json:"lag,omitempty"`
+type UbiOltInterfaceIdentification struct {
+	ID   *string `json:"id"`
+	Mac  *string `json:"mac"`
+	Name *string `json:"name"`
+	Type *string `json:"type"`
+}
+
+type UbiOltInterfacePon struct {
+	Sfp struct {
+		Los     interface{} `json:"los"`
+		Serial  *string     `json:"serial"`
+		TxFault interface{} `json:"txFault"`
+		Part    *string     `json:"part"`
+		Vendor  *string     `json:"vendor"`
+		Present *bool       `json:"present"`
+	}
+}
+
+type UbiOltInterfacePort struct {
+	Sfp struct {
+		Los     interface{} `json:"los"`
+		Serial  *string     `json:"serial"`
+		TxFault interface{} `json:"txFault"`
+		Part    *string     `json:"part"`
+		Vendor  *string     `json:"vendor"`
+		Present *bool       `json:"present"`
+	}
+}
+
+type UbiOltInterfaceStatus struct {
+	CurrentSpeed *string `json:"currentSpeed"`
+	Speed        *string `json:"speed,omitempty"`
+	Enabled      *bool   `json:"enabled"`
+	Plugged      *bool   `json:"plugged"`
+}
+
+type UbiOltInterfaceLag struct {
+	Interfaces []interface{} `json:"interfaces"`
+	Static     *bool         `json:"static"`
+}
+
+type UbiOltInterface struct {
+	Addresses      []interface{}                 `json:"addresses"`
+	Identification UbiOltInterfaceIdentification `json:"identification,omitempty"`
+	Pon            UbiOltInterfacePon            `json:"pon,omitempty"`
+	Status         UbiOltInterfaceStatus         `json:"status,omitempty"`
+	Port           UbiOltInterfacePort           `json:"port,omitempty"`
+	Lag            UbiOltInterfaceLag            `json:"lag,omitempty"`
+}
+
+type UbiOltInterfaces []UbiOltInterface
+
+type UbiOltInterfacePonSet struct {
+	Addresses      []interface{}                 `json:"addresses"`
+	Identification UbiOltInterfaceIdentification `json:"identification,omitempty"`
+	Status         UbiOltInterfaceStatus         `json:"status,omitempty"`
+	Pon            UbiOltInterfacePon            `json:"pon,omitempty"`
+}
+
+type UbiOltInterfacePortSet struct {
+	Addresses      []interface{}                 `json:"addresses"`
+	Identification UbiOltInterfaceIdentification `json:"identification,omitempty"`
+	Status         UbiOltInterfaceStatus         `json:"status,omitempty"`
+	Port           UbiOltInterfacePort           `json:"port,omitempty"`
 }
 
 // Ubiquiti specific OLT statistics type used by device web API
@@ -211,6 +238,9 @@ func (sd *deviceUbiquiti) WebApiPut(target string, jsonData []byte) ([]byte, err
 
 	baseUrl := "https://" + sd.ip + "/api/v1.0/"
 	req, err := http.NewRequest(http.MethodPut, baseUrl+target, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, err
+	}
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	res, err := client.Do(req)
 	if err != nil {
@@ -313,6 +343,13 @@ func (sd *deviceUbiquiti) WebLogout() error {
 
 // Get all OLT interface info via web API.
 func (sd *deviceUbiquiti) oltIfInfo() (*UbiOltInterfaces, error) {
+	// return from cache if allowed and cache is present
+	if sd.useCache {
+		if x, found := sd.cache.Get("oltIfInfo"); found {
+			return x.(*UbiOltInterfaces), nil
+		}
+	}
+
 	if err := sd.WebAuth(sd.webSession.cred); err != nil {
 		return nil, fmt.Errorf("error: WebAuth - %s", err)
 	}
@@ -337,11 +374,21 @@ func (sd *deviceUbiquiti) oltIfInfo() (*UbiOltInterfaces, error) {
 		return nil, fmt.Errorf("no OLT interface info")
 	}
 
+	// save to cache
+	sd.cache.Set("oltIfInfo", info, cache.DefaultExpiration)
+
 	return info, nil
 }
 
 // Get all OLT statistics via web API.
 func (sd *deviceUbiquiti) oltStatistics() (*UbiOltStatistics, error) {
+	// return from cache if allowed and cache is present
+	if sd.useCache {
+		if x, found := sd.cache.Get("oltStatistics"); found {
+			return x.(*UbiOltStatistics), nil
+		}
+	}
+
 	if err := sd.WebAuth(sd.webSession.cred); err != nil {
 		return nil, fmt.Errorf("error: WebAuth - %s", err)
 	}
@@ -365,6 +412,9 @@ func (sd *deviceUbiquiti) oltStatistics() (*UbiOltStatistics, error) {
 	if info == nil {
 		return nil, fmt.Errorf("no OLT statistics")
 	}
+
+	// save to cache
+	sd.cache.Set("oltStatistics", info, cache.DefaultExpiration)
 
 	return info, nil
 }
@@ -528,9 +578,9 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 				out[i].OperStr.IsSet = true
 			}
 			if t == "All" || t == "Alias" {
-				for _, d := range *rawIfInfo {
-					if d.Identification.ID == wDescr {
-						out[i].Alias.Value = d.Identification.Name
+				for _, wi := range *rawIfInfo {
+					if *wi.Identification.ID == wDescr {
+						out[i].Alias.Value = *wi.Identification.Name
 						out[i].Alias.IsSet = true
 					}
 				}
@@ -542,9 +592,9 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 				out[i].TypeStr.IsSet = true
 			}
 			if t == "All" || t == "Speed" {
-				for _, d := range *rawIfInfo {
-					if d.Identification.ID == wDescr {
-						speed := strings.Split(d.Status.CurrentSpeed, "-")
+				for _, wi := range *rawIfInfo {
+					if *wi.Identification.ID == wDescr {
+						speed := strings.Split(*wi.Status.CurrentSpeed, "-")
 						si, _ := strconv.Atoi(speed[0])
 						out[i].Speed.Value = uint64(si) * 1000000
 						out[i].Speed.IsSet = true
@@ -552,18 +602,18 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 				}
 			}
 			if t == "All" || t == "Mac" {
-				for _, d := range *rawIfInfo {
-					if d.Identification.ID == wDescr {
-						out[i].Mac.Value = d.Identification.Mac
+				for _, wi := range *rawIfInfo {
+					if *wi.Identification.ID == wDescr {
+						out[i].Mac.Value = *wi.Identification.Mac
 						out[i].Mac.IsSet = true
 					}
 				}
 			}
 			if t == "All" || t == "Admin" {
-				for _, d := range *rawIfInfo {
-					if d.Identification.ID == wDescr {
+				for _, wi := range *rawIfInfo {
+					if *wi.Identification.ID == wDescr {
 						var stat int64 = 2
-						if d.Status.Enabled {
+						if *wi.Status.Enabled {
 							stat = 1
 							out[i].Admin.Value = stat
 							out[i].Admin.IsSet = true
@@ -574,8 +624,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 				}
 			}
 			if t == "All" || t == "InOctets" {
-				for _, d := range *rawIfStats {
-					for _, id := range d.Interfaces {
+				for _, wi := range *rawIfStats {
+					for _, id := range wi.Interfaces {
 						if id.ID == wDescr {
 							out[i].InOctets.Value = id.Statistics.RxBytes
 							out[i].InOctets.IsSet = true
@@ -585,8 +635,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 				}
 			}
 			if t == "All" || t == "InPkts" {
-				for _, d := range *rawIfStats {
-					for _, id := range d.Interfaces {
+				for _, wi := range *rawIfStats {
+					for _, id := range wi.Interfaces {
 						if id.ID == wDescr {
 							out[i].InPkts.Value = id.Statistics.RxPackets
 							out[i].InPkts.IsSet = true
@@ -596,8 +646,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 				}
 			}
 			if t == "All" || t == "InMcast" {
-				for _, d := range *rawIfStats {
-					for _, id := range d.Interfaces {
+				for _, wi := range *rawIfStats {
+					for _, id := range wi.Interfaces {
 						if id.ID == wDescr {
 							out[i].InMcast.Value = id.Statistics.RxMulticast
 							out[i].InMcast.IsSet = true
@@ -607,8 +657,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 				}
 			}
 			if t == "All" || t == "InBcast" {
-				for _, d := range *rawIfStats {
-					for _, id := range d.Interfaces {
+				for _, wi := range *rawIfStats {
+					for _, id := range wi.Interfaces {
 						if id.ID == wDescr {
 							out[i].InBcast.Value = id.Statistics.RxBroadcast
 							out[i].InBcast.IsSet = true
@@ -618,8 +668,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 				}
 			}
 			if t == "All" || t == "InErrors" {
-				for _, d := range *rawIfStats {
-					for _, id := range d.Interfaces {
+				for _, wi := range *rawIfStats {
+					for _, id := range wi.Interfaces {
 						if id.ID == wDescr {
 							out[i].InErrors.Value = id.Statistics.RxErrors
 							out[i].InErrors.IsSet = true
@@ -629,8 +679,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 				}
 			}
 			if t == "All" || t == "OutOctets" {
-				for _, d := range *rawIfStats {
-					for _, id := range d.Interfaces {
+				for _, wi := range *rawIfStats {
+					for _, id := range wi.Interfaces {
 						if id.ID == wDescr {
 							out[i].OutOctets.Value = id.Statistics.TxBytes
 							out[i].OutOctets.IsSet = true
@@ -640,8 +690,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 				}
 			}
 			if t == "All" || t == "OutPkts" {
-				for _, d := range *rawIfStats {
-					for _, id := range d.Interfaces {
+				for _, wi := range *rawIfStats {
+					for _, id := range wi.Interfaces {
 						if id.ID == wDescr {
 							out[i].OutPkts.Value = id.Statistics.TxPackets
 							out[i].OutPkts.IsSet = true
@@ -651,8 +701,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 				}
 			}
 			if t == "All" || t == "OutMcast" {
-				for _, d := range *rawIfStats {
-					for _, id := range d.Interfaces {
+				for _, wi := range *rawIfStats {
+					for _, id := range wi.Interfaces {
 						if id.ID == wDescr {
 							out[i].OutMcast.Value = id.Statistics.TxMulticast
 							out[i].OutMcast.IsSet = true
@@ -662,8 +712,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 				}
 			}
 			if t == "All" || t == "OutBcast" {
-				for _, d := range *rawIfStats {
-					for _, id := range d.Interfaces {
+				for _, wi := range *rawIfStats {
+					for _, id := range wi.Interfaces {
 						if id.ID == wDescr {
 							out[i].OutBcast.Value = id.Statistics.TxBroadcast
 							out[i].OutBcast.IsSet = true
@@ -673,8 +723,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 				}
 			}
 			if t == "All" || t == "OutErrors" {
-				for _, d := range *rawIfStats {
-					for _, id := range d.Interfaces {
+				for _, wi := range *rawIfStats {
+					for _, id := range wi.Interfaces {
 						if id.ID == wDescr {
 							out[i].OutErrors.Value = id.Statistics.TxErrors
 							out[i].OutErrors.IsSet = true
@@ -687,4 +737,82 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 	}
 
 	return out, nil
+}
+
+// Set Interface Admin status
+// set - map of ifIndexes and their states (up|down)
+func (sd *deviceUbiquiti) SetIfAdmStat(set map[string]string) error {
+	ifInfo, err := sd.IfInfo([]string{"Descr", "Admin"})
+	if err != nil {
+		return err
+	}
+
+	rawIfInfo, err := sd.oltIfInfo()
+	if err != nil {
+		return err
+	}
+
+	// spew.Dump(ifInfo)
+	states := map[string]bool{
+		"up":   true,
+		"down": false,
+	}
+
+	dSet := make(map[string]bool)
+	for idx, state := range set {
+		s, ok := states[state]
+		if !ok {
+			return fmt.Errorf("interface state %s is not valid", state)
+		}
+
+		info, ok := ifInfo[idx]
+		if !ok {
+			return fmt.Errorf("interface with ifindex %s not found", idx)
+		}
+
+		dSet[info.Descr.Value] = s
+	}
+
+	var newPonIfs []UbiOltInterfacePonSet
+
+	for _, rinfo := range *rawIfInfo {
+
+		d := rinfo.Identification.ID
+		if v, ok := dSet[*d]; ok {
+			if v != *rinfo.Status.Enabled {
+				if strings.HasPrefix(*d, "pon") {
+					newPonIf := new(UbiOltInterfacePonSet)
+					newPonIf.Addresses = rinfo.Addresses
+					newPonIf.Identification = rinfo.Identification
+					newPonIf.Pon = rinfo.Pon
+					newPonIf.Status = rinfo.Status
+					newPonIf.Status.Enabled = &v
+					newPonIfs = append(newPonIfs, *newPonIf)
+				}
+			}
+		}
+	}
+
+	if len(newPonIfs) > 0 {
+		jsonData, err := json.Marshal(newPonIfs)
+		if err != nil {
+			return err
+		}
+
+		if err := sd.WebAuth(sd.webSession.cred); err != nil {
+			return fmt.Errorf("error: WebAuth - %s", err)
+		}
+
+		_, err = sd.WebApiPut("interfaces", jsonData)
+		if err != nil {
+			return err
+		}
+
+		err = sd.WebLogout()
+		if err != nil {
+			return fmt.Errorf("errors: WebLogout - %s", err)
+		}
+	}
+
+	return err
 }
