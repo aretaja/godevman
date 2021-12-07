@@ -26,18 +26,7 @@ type UbiOltInterfaceIdentification struct {
 	Type *string `json:"type"`
 }
 
-type UbiOltInterfacePon struct {
-	Sfp struct {
-		Los     interface{} `json:"los"`
-		Serial  *string     `json:"serial"`
-		TxFault interface{} `json:"txFault"`
-		Part    *string     `json:"part"`
-		Vendor  *string     `json:"vendor"`
-		Present *bool       `json:"present"`
-	}
-}
-
-type UbiOltInterfacePort struct {
+type UbiOltInterfaceSfp struct {
 	Sfp struct {
 		Los     interface{} `json:"los"`
 		Serial  *string     `json:"serial"`
@@ -63,9 +52,9 @@ type UbiOltInterfaceLag struct {
 type UbiOltInterface struct {
 	Addresses      []interface{}                 `json:"addresses"`
 	Identification UbiOltInterfaceIdentification `json:"identification,omitempty"`
-	Pon            UbiOltInterfacePon            `json:"pon,omitempty"`
+	Pon            UbiOltInterfaceSfp            `json:"pon,omitempty"`
 	Status         UbiOltInterfaceStatus         `json:"status,omitempty"`
-	Port           UbiOltInterfacePort           `json:"port,omitempty"`
+	Port           UbiOltInterfaceSfp            `json:"port,omitempty"`
 	Lag            UbiOltInterfaceLag            `json:"lag,omitempty"`
 }
 
@@ -75,14 +64,14 @@ type UbiOltInterfacePonSet struct {
 	Addresses      []interface{}                 `json:"addresses"`
 	Identification UbiOltInterfaceIdentification `json:"identification,omitempty"`
 	Status         UbiOltInterfaceStatus         `json:"status,omitempty"`
-	Pon            UbiOltInterfacePon            `json:"pon,omitempty"`
+	Pon            UbiOltInterfaceSfp            `json:"pon,omitempty"`
 }
 
 type UbiOltInterfacePortSet struct {
 	Addresses      []interface{}                 `json:"addresses"`
 	Identification UbiOltInterfaceIdentification `json:"identification,omitempty"`
 	Status         UbiOltInterfaceStatus         `json:"status,omitempty"`
-	Port           UbiOltInterfacePort           `json:"port,omitempty"`
+	Port           UbiOltInterfaceSfp            `json:"port,omitempty"`
 }
 
 // Ubiquiti specific OLT statistics type used by device web API
@@ -752,7 +741,6 @@ func (sd *deviceUbiquiti) SetIfAdmStat(set map[string]string) error {
 		return err
 	}
 
-	// spew.Dump(ifInfo)
 	states := map[string]bool{
 		"up":   true,
 		"down": false,
@@ -815,4 +803,97 @@ func (sd *deviceUbiquiti) SetIfAdmStat(set map[string]string) error {
 	}
 
 	return err
+}
+
+// Set Interface Alias
+// set - map of ifIndexes and related ifAliases
+func (sd *deviceUbiquiti) SetIfAlias(set map[string]string) (err error) {
+	ifInfo, err := sd.IfInfo([]string{"Descr", "Alias"})
+	if err != nil {
+		return err
+	}
+
+	rawIfInfo, err := sd.oltIfInfo()
+	if err != nil {
+		return err
+	}
+
+	dSet := make(map[string]string)
+	for idx, alias := range set {
+		info, ok := ifInfo[idx]
+		if !ok {
+			return fmt.Errorf("interface with ifindex %s not found", idx)
+		}
+
+		dSet[info.Descr.Value] = alias
+	}
+
+	var newPonIfs []UbiOltInterfacePonSet
+	var newPortIfs []UbiOltInterfacePortSet
+
+	for _, rinfo := range *rawIfInfo {
+
+		d := rinfo.Identification.ID
+		if v, ok := dSet[*d]; ok {
+			if v != *rinfo.Identification.Name {
+				if strings.HasPrefix(*d, "pon") {
+					newPonIf := new(UbiOltInterfacePonSet)
+					newPonIf.Addresses = rinfo.Addresses
+					newPonIf.Identification = rinfo.Identification
+					newPonIf.Pon = rinfo.Pon
+					newPonIf.Status = rinfo.Status
+					newPonIf.Identification.Name = &v
+					newPonIfs = append(newPonIfs, *newPonIf)
+				} else if strings.HasPrefix(*d, "sfp") {
+					newPortIf := new(UbiOltInterfacePortSet)
+					newPortIf.Addresses = rinfo.Addresses
+					newPortIf.Identification = rinfo.Identification
+					newPortIf.Port = rinfo.Port
+					newPortIf.Status = rinfo.Status
+					newPortIf.Identification.Name = &v
+					newPortIfs = append(newPortIfs, *newPortIf)
+				}
+			}
+		}
+	}
+
+	if len(newPonIfs) > 0 || len(newPortIfs) > 0 {
+		if err := sd.WebAuth(sd.webSession.cred); err != nil {
+			return fmt.Errorf("error: WebAuth - %s", err)
+		}
+
+		defer func() {
+			if err2 := sd.WebLogout(); err2 != nil {
+				if err != nil {
+					err = fmt.Errorf("%w; WebLogout - %s", err, err2)
+				} else {
+					err = fmt.Errorf("error: WebLogout - %s", err2)
+				}
+			}
+		}()
+	}
+
+	if len(newPonIfs) > 0 {
+		jsonData, err := json.Marshal(newPonIfs)
+		if err != nil {
+			return err
+		}
+
+		if _, err := sd.WebApiPut("interfaces", jsonData); err != nil {
+			return fmt.Errorf("errors: WebApiPut - %s", err)
+		}
+	}
+
+	if len(newPortIfs) > 0 {
+		jsonData, err := json.Marshal(newPortIfs)
+		if err != nil {
+			return err
+		}
+
+		if _, err := sd.WebApiPut("interfaces", jsonData); err != nil {
+			return fmt.Errorf("errors: WebApiPut - %s", err)
+		}
+	}
+
+	return
 }
