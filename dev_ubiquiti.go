@@ -132,6 +132,21 @@ type UbiOltStatistics []struct {
 	Timestamp int64 `json:"timestamp"`
 }
 
+type UbiOltVlans struct {
+	Trunks []interface{} `json:"trunks"`
+	Vlans  []struct {
+		Name          string `json:"name"`
+		Type          string `json:"type"`
+		Participation []struct {
+			Interface struct {
+				ID string `json:"id"`
+			} `json:"interface"`
+			Mode string `json:"mode"`
+		} `json:"participation"`
+		ID int `json:"id"`
+	} `json:"vlans"`
+}
+
 // Get running software version
 func (sd *deviceUbiquiti) SwVersion() (string, error) {
 	oid := ".1.3.6.1.4.1.41112.1.5.1.3.0"
@@ -404,6 +419,45 @@ func (sd *deviceUbiquiti) oltStatistics() (*UbiOltStatistics, error) {
 
 	// save to cache
 	sd.cache.Set("oltStatistics", info, cache.DefaultExpiration)
+
+	return info, nil
+}
+
+// Get OLT VLAN info via web API.
+func (sd *deviceUbiquiti) oltVlans() (*UbiOltVlans, error) {
+	// return from cache if allowed and cache is present
+	if sd.useCache {
+		if x, found := sd.cache.Get("oltVlans"); found {
+			return x.(*UbiOltVlans), nil
+		}
+	}
+
+	if err := sd.WebAuth(sd.webSession.cred); err != nil {
+		return nil, fmt.Errorf("error: WebAuth - %s", err)
+	}
+
+	body, err := sd.WebApiGet("vlans")
+	if err != nil {
+		return nil, fmt.Errorf("get request from device api failed: %s", err)
+	}
+
+	err = sd.WebLogout()
+	if err != nil {
+		return nil, fmt.Errorf("errors: WebLogout - %s", err)
+	}
+
+	info := new(UbiOltVlans)
+	err = json.Unmarshal(body, info)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal OLT VLANS failed: %s", err)
+	}
+
+	if info == nil {
+		return nil, fmt.Errorf("no OLT VLANS")
+	}
+
+	// save to cache
+	sd.cache.Set("oltVlans", info, cache.DefaultExpiration)
 
 	return info, nil
 }
@@ -896,4 +950,63 @@ func (sd *deviceUbiquiti) SetIfAlias(set map[string]string) (err error) {
 	}
 
 	return
+}
+
+// Get info from device web API
+// Returns vlan id-s and names
+func (sd *deviceUbiquiti) D1qVlans() (map[string]string, error) {
+	var out = make(map[string]string)
+
+	rawVlans, err := sd.oltVlans()
+	if err != nil {
+		return out, err
+	}
+
+	for _, v := range rawVlans.Vlans {
+		out[strconv.Itoa(v.ID)] = v.Name
+	}
+
+	return out, err
+}
+
+// Get info from device web API
+// Returns vlan port relations
+func (sd *deviceUbiquiti) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
+	out := make(map[string]*d1qVlanInfo)
+
+	iInfo, err := sd.IfInfo([]string{"Descr"})
+	if err != nil {
+		return out, err
+	}
+
+	vInfo, err := sd.oltVlans()
+	if err != nil {
+		return out, err
+	}
+
+	descr := make(map[string]string)
+	for i, data := range iInfo {
+		if data.Descr.IsSet {
+			descr[data.Descr.Value] = i
+		}
+	}
+
+	for _, v := range vInfo.Vlans {
+		vidStr := strconv.Itoa(v.ID)
+		out[vidStr] = new(d1qVlanInfo)
+		out[vidStr].Name = v.Name
+		out[vidStr].Ports = make(map[int]*d1qVlanBrPort)
+		for _, p := range v.Participation {
+			if i, ok := descr[p.Interface.ID]; ok {
+				pId, _ := strconv.Atoi(i)
+				out[vidStr].Ports[pId] = new(d1qVlanBrPort)
+				out[vidStr].Ports[pId].IfIdx = pId
+				if p.Mode != "tagged" {
+					out[vidStr].Ports[pId].UnTag = true
+				}
+			}
+		}
+	}
+
+	return out, err
 }
