@@ -1074,7 +1074,7 @@ func (sd *deviceUbiquiti) IpInfo(ip ...string) (map[string]*ipInfo, error) {
 			filter[i] = true
 		}
 
-		for i, _ := range out {
+		for i := range out {
 			if _, ok := filter[i]; !ok {
 				delete(out, i)
 			}
