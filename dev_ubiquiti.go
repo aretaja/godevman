@@ -1087,3 +1087,38 @@ func (sd *deviceUbiquiti) IpInfo(ip ...string) (map[string]*ipInfo, error) {
 
 	return out, err
 }
+
+// Get IP Interface info
+func (sd *deviceUbiquiti) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
+	out := make(map[string]*ipIfInfo)
+
+	ipInfo, err := sd.IpInfo(ip...)
+	if err != nil {
+		return out, err
+	}
+
+	ifInfo, err := sd.IfInfo([]string{"Descr", "Alias"})
+	if err != nil {
+		return out, err
+	}
+
+	for i, d := range ipInfo {
+		out[i] = new(ipIfInfo)
+		ifIdxStr := strconv.FormatInt(int64(d.IfIdx), 10)
+
+		var descr, alias string
+		ifdata, ok := ifInfo[ifIdxStr]
+		if !ok {
+			descr = "unkn_" + ifIdxStr
+		} else {
+			descr = ifdata.Descr.Value
+			alias = ifdata.Alias.Value
+		}
+
+		out[i].ipInfo = *d
+		out[i].Descr = descr
+		out[i].Alias = alias
+	}
+
+	return out, err
+}
