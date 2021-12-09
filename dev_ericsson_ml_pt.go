@@ -22,7 +22,7 @@ type deviceEricssonMlPt struct {
 func (sd *deviceEricssonMlPt) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
 	out := make(map[string]*ipIfInfo)
 
-	ipInfo, err := sd.IpInfo([]string{"All"}, ip...)
+	ipInfo, err := sd.IpInfo(ip...)
 	if err != nil {
 		return out, err
 	}

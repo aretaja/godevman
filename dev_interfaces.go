@@ -41,7 +41,7 @@ type DevVlan interface {
 
 // Functionality related to IP addresses
 type DevIp interface {
-	IpInfo(targets []string, ip ...string) (map[string]*ipInfo, error)
+	IpInfo(ip ...string) (map[string]*ipInfo, error)
 	IpIfInfo(ip ...string) (map[string]*ipIfInfo, error)
 }
 

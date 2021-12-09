@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -19,6 +20,13 @@ type deviceUbiquiti struct {
 }
 
 // Ubiquiti specific OLT interface info type used by device web API
+type Address struct {
+	Cidr    *string     `json:"cidr"`
+	Origin  interface{} `json:"origin"`
+	Type    *string     `json:"type"`
+	Version *string     `json:"version"`
+}
+
 type UbiOltInterfaceIdentification struct {
 	ID   *string `json:"id"`
 	Mac  *string `json:"mac"`
@@ -45,12 +53,12 @@ type UbiOltInterfaceStatus struct {
 }
 
 type UbiOltInterfaceLag struct {
-	Interfaces []interface{} `json:"interfaces"`
 	Static     *bool         `json:"static"`
+	Interfaces []interface{} `json:"interfaces"`
 }
 
 type UbiOltInterface struct {
-	Addresses      []interface{}                 `json:"addresses"`
+	Addresses      []Address                     `json:"addresses"`
 	Identification UbiOltInterfaceIdentification `json:"identification,omitempty"`
 	Pon            UbiOltInterfaceSfp            `json:"pon,omitempty"`
 	Status         UbiOltInterfaceStatus         `json:"status,omitempty"`
@@ -61,17 +69,17 @@ type UbiOltInterface struct {
 type UbiOltInterfaces []UbiOltInterface
 
 type UbiOltInterfacePonSet struct {
-	Addresses      []interface{}                 `json:"addresses"`
+	Pon            UbiOltInterfaceSfp            `json:"pon,omitempty"`
 	Identification UbiOltInterfaceIdentification `json:"identification,omitempty"`
 	Status         UbiOltInterfaceStatus         `json:"status,omitempty"`
-	Pon            UbiOltInterfaceSfp            `json:"pon,omitempty"`
+	Addresses      []Address                     `json:"addresses"`
 }
 
 type UbiOltInterfacePortSet struct {
-	Addresses      []interface{}                 `json:"addresses"`
+	Port           UbiOltInterfaceSfp            `json:"port,omitempty"`
 	Identification UbiOltInterfaceIdentification `json:"identification,omitempty"`
 	Status         UbiOltInterfaceStatus         `json:"status,omitempty"`
-	Port           UbiOltInterfaceSfp            `json:"port,omitempty"`
+	Addresses      []Address                     `json:"addresses"`
 }
 
 // Ubiquiti specific OLT statistics type used by device web API
@@ -1005,6 +1013,75 @@ func (sd *deviceUbiquiti) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 					out[vidStr].Ports[pId].UnTag = true
 				}
 			}
+		}
+	}
+
+	return out, err
+}
+
+// Get info via web API
+func (sd *deviceUbiquiti) IpInfo(ip ...string) (map[string]*ipInfo, error) {
+	out := make(map[string]*ipInfo)
+
+	ifInfo, err := sd.IfInfo([]string{"Descr"})
+	if err != nil {
+		return out, err
+	}
+
+	rawIfInfo, err := sd.oltIfInfo()
+	if err != nil {
+		return out, err
+	}
+
+	descr := make(map[string]string)
+	for i, data := range ifInfo {
+		if data.Descr.IsSet {
+			descr[data.Descr.Value] = i
+		}
+	}
+
+	for _, i := range *rawIfInfo {
+		if len(i.Addresses) > 0 {
+			for _, a := range i.Addresses {
+				if idx, ok := descr[*i.Identification.ID]; ok && *a.Version == "v4" {
+					idxStr, _ := strconv.Atoi(idx)
+
+					ipAddr, net, err := net.ParseCIDR(*a.Cidr)
+					if err != nil {
+						continue
+					}
+
+					ipStr := ipAddr.String()
+
+					m := net.Mask
+					if len(m) != 4 {
+						continue
+					}
+
+					mask := fmt.Sprintf("%d.%d.%d.%d", m[0], m[1], m[2], m[3])
+
+					out[ipStr] = new(ipInfo)
+					out[ipStr].IfIdx = int64(idxStr)
+					out[ipStr].Mask = mask
+				}
+			}
+		}
+	}
+
+	if len(ip) > 0 && len(out) > 0 {
+		filter := make(map[string]bool)
+		for _, i := range ip {
+			filter[i] = true
+		}
+
+		for i, _ := range out {
+			if _, ok := filter[i]; !ok {
+				delete(out, i)
+			}
+		}
+
+		if len(out) == 0 {
+			return nil, fmt.Errorf("none of requested ips found")
 		}
 	}
 

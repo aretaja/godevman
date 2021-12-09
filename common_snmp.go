@@ -660,25 +660,10 @@ func (sd *snmpCommon) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 }
 
 // Get info from .iso.org.dod.internet.mgmt.mib-2.ip.ipAddrTable
-// Valid targets values: "All", "Mask", "IfIdx"
-func (sd *snmpCommon) IpInfo(targets []string, ip ...string) (map[string]*ipInfo, error) {
+func (sd *snmpCommon) IpInfo(ip ...string) (map[string]*ipInfo, error) {
 	out := make(map[string]*ipInfo)
 	ipTable := ".1.3.6.1.2.1.4.20.1."
-	var oids []string
-
-	allOids := []string{ipTable + "2", ipTable + "3"}
-
-	for _, t := range targets {
-		switch t {
-		case "All":
-			oids = allOids
-			continue
-		case "Mask":
-			oids = append(oids, ipTable+"2")
-		case "IfIdx":
-			oids = append(oids, ipTable+"3")
-		}
-	}
+	oids := []string{ipTable + "2", ipTable + "3"}
 
 	mapEntry := func(oid, prefix string) string {
 		i := strings.TrimPrefix(oid, prefix)
@@ -722,7 +707,7 @@ func (sd *snmpCommon) IpInfo(targets []string, ip ...string) (map[string]*ipInfo
 func (sd *snmpCommon) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
 	out := make(map[string]*ipIfInfo)
 
-	ipInfo, err := sd.IpInfo([]string{"All"}, ip...)
+	ipInfo, err := sd.IpInfo(ip...)
 	if err != nil {
 		return out, err
 	}
