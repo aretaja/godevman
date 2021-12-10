@@ -85,56 +85,56 @@ type UbiOltInterfacePortSet struct {
 // Ubiquiti specific OLT statistics type used by device web API
 type UbiOltStatistics []struct {
 	Interfaces []struct {
-		ID         string `json:"id"`
-		Name       string `json:"name"`
+		ID         *string `json:"id"`
+		Name       *string `json:"name"`
 		Statistics struct {
-			RxBroadcast uint64 `json:"rxBroadcast"`
-			RxBytes     uint64 `json:"rxBytes"`
-			RxErrors    uint64 `json:"rxErrors"`
-			RxMulticast uint64 `json:"rxMulticast"`
-			RxPackets   uint64 `json:"rxPackets"`
-			RxRate      uint64 `json:"rxRate"`
-			TxBroadcast uint64 `json:"txBroadcast"`
-			TxBytes     uint64 `json:"txBytes"`
-			TxErrors    uint64 `json:"txErrors"`
-			TxMulticast uint64 `json:"txMulticast"`
-			TxPackets   uint64 `json:"txPackets"`
-			TxRate      uint64 `json:"txRate"`
+			RxBroadcast *uint64 `json:"rxBroadcast"`
+			RxBytes     *uint64 `json:"rxBytes"`
+			RxErrors    *uint64 `json:"rxErrors"`
+			RxMulticast *uint64 `json:"rxMulticast"`
+			RxPackets   *uint64 `json:"rxPackets"`
+			RxRate      *uint64 `json:"rxRate"`
+			TxBroadcast *uint64 `json:"txBroadcast"`
+			TxBytes     *uint64 `json:"txBytes"`
+			TxErrors    *uint64 `json:"txErrors"`
+			TxMulticast *uint64 `json:"txMulticast"`
+			TxPackets   *uint64 `json:"txPackets"`
+			TxRate      *uint64 `json:"txRate"`
 		} `json:"statistics,omitempty"`
 	} `json:"interfaces"`
 	Device struct {
-		CPU []struct {
-			Identifier  string  `json:"identifier"`
-			Temperature float64 `json:"temperature"`
-			Usage       int     `json:"usage"`
-		} `json:"cpu"`
+		RAM struct {
+			Free  *int `json:"free"`
+			Total *int `json:"total"`
+			Usage *int `json:"usage"`
+		} `json:"ram"`
 		FanSpeeds []struct {
-			Value float64 `json:"value"`
+			Value *float64 `json:"value"`
 		} `json:"fanSpeeds"`
 		Power []struct {
-			PsuType   string  `json:"psuType"`
-			Current   float64 `json:"current,omitempty"`
-			Power     float64 `json:"power,omitempty"`
-			Voltage   float64 `json:"voltage,omitempty"`
-			Connected bool    `json:"connected"`
+			PsuType   *string  `json:"psuType"`
+			Current   *float64 `json:"current,omitempty"`
+			Power     *float64 `json:"power,omitempty"`
+			Voltage   *float64 `json:"voltage,omitempty"`
+			Connected *bool    `json:"connected"`
 		} `json:"power"`
 		Signals []interface{} `json:"signals"`
 		Storage []struct {
-			Name        string  `json:"name"`
-			SysName     string  `json:"sysName"`
-			Type        string  `json:"type"`
-			Size        int     `json:"size"`
-			Temperature float64 `json:"temperature"`
-			Used        int     `json:"used"`
+			Name        *string  `json:"name"`
+			SysName     *string  `json:"sysName"`
+			Type        *string  `json:"type"`
+			Size        *int     `json:"size"`
+			Temperature *float64 `json:"temperature"`
+			Used        *int     `json:"used"`
 		} `json:"storage"`
 		Temperatures []struct {
-			Value float64 `json:"value"`
+			Value *float64 `json:"value"`
 		} `json:"temperatures"`
-		RAM struct {
-			Free  int `json:"free"`
-			Total int `json:"total"`
-			Usage int `json:"usage"`
-		} `json:"ram"`
+		CPU []struct {
+			Identifier  *string  `json:"identifier"`
+			Temperature *float64 `json:"temperature"`
+			Usage       *int     `json:"usage"`
+		} `json:"cpu"`
 		Uptime int `json:"uptime"`
 	} `json:"device"`
 	Timestamp int64 `json:"timestamp"`
@@ -677,8 +677,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 			if t == "All" || t == "InOctets" {
 				for _, wi := range *rawIfStats {
 					for _, id := range wi.Interfaces {
-						if id.ID == wDescr {
-							out[i].InOctets.Value = id.Statistics.RxBytes
+						if *id.ID == wDescr && id.Statistics.RxBytes != nil {
+							out[i].InOctets.Value = *id.Statistics.RxBytes
 							out[i].InOctets.IsSet = true
 						}
 					}
@@ -688,8 +688,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 			if t == "All" || t == "InPkts" {
 				for _, wi := range *rawIfStats {
 					for _, id := range wi.Interfaces {
-						if id.ID == wDescr {
-							out[i].InPkts.Value = id.Statistics.RxPackets
+						if *id.ID == wDescr && id.Statistics.RxPackets != nil {
+							out[i].InPkts.Value = *id.Statistics.RxPackets
 							out[i].InPkts.IsSet = true
 						}
 					}
@@ -699,8 +699,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 			if t == "All" || t == "InMcast" {
 				for _, wi := range *rawIfStats {
 					for _, id := range wi.Interfaces {
-						if id.ID == wDescr {
-							out[i].InMcast.Value = id.Statistics.RxMulticast
+						if *id.ID == wDescr && id.Statistics.RxMulticast != nil {
+							out[i].InMcast.Value = *id.Statistics.RxMulticast
 							out[i].InMcast.IsSet = true
 						}
 					}
@@ -710,8 +710,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 			if t == "All" || t == "InBcast" {
 				for _, wi := range *rawIfStats {
 					for _, id := range wi.Interfaces {
-						if id.ID == wDescr {
-							out[i].InBcast.Value = id.Statistics.RxBroadcast
+						if *id.ID == wDescr && id.Statistics.RxBroadcast != nil {
+							out[i].InBcast.Value = *id.Statistics.RxBroadcast
 							out[i].InBcast.IsSet = true
 						}
 					}
@@ -721,8 +721,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 			if t == "All" || t == "InErrors" {
 				for _, wi := range *rawIfStats {
 					for _, id := range wi.Interfaces {
-						if id.ID == wDescr {
-							out[i].InErrors.Value = id.Statistics.RxErrors
+						if *id.ID == wDescr && id.Statistics.RxErrors != nil {
+							out[i].InErrors.Value = *id.Statistics.RxErrors
 							out[i].InErrors.IsSet = true
 						}
 					}
@@ -732,8 +732,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 			if t == "All" || t == "OutOctets" {
 				for _, wi := range *rawIfStats {
 					for _, id := range wi.Interfaces {
-						if id.ID == wDescr {
-							out[i].OutOctets.Value = id.Statistics.TxBytes
+						if *id.ID == wDescr && id.Statistics.TxBytes != nil {
+							out[i].OutOctets.Value = *id.Statistics.TxBytes
 							out[i].OutOctets.IsSet = true
 						}
 					}
@@ -743,8 +743,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 			if t == "All" || t == "OutPkts" {
 				for _, wi := range *rawIfStats {
 					for _, id := range wi.Interfaces {
-						if id.ID == wDescr {
-							out[i].OutPkts.Value = id.Statistics.TxPackets
+						if *id.ID == wDescr && id.Statistics.TxPackets != nil {
+							out[i].OutPkts.Value = *id.Statistics.TxPackets
 							out[i].OutPkts.IsSet = true
 						}
 					}
@@ -754,8 +754,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 			if t == "All" || t == "OutMcast" {
 				for _, wi := range *rawIfStats {
 					for _, id := range wi.Interfaces {
-						if id.ID == wDescr {
-							out[i].OutMcast.Value = id.Statistics.TxMulticast
+						if *id.ID == wDescr && id.Statistics.TxMulticast != nil {
+							out[i].OutMcast.Value = *id.Statistics.TxMulticast
 							out[i].OutMcast.IsSet = true
 						}
 					}
@@ -765,8 +765,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 			if t == "All" || t == "OutBcast" {
 				for _, wi := range *rawIfStats {
 					for _, id := range wi.Interfaces {
-						if id.ID == wDescr {
-							out[i].OutBcast.Value = id.Statistics.TxBroadcast
+						if *id.ID == wDescr && id.Statistics.TxBroadcast != nil {
+							out[i].OutBcast.Value = *id.Statistics.TxBroadcast
 							out[i].OutBcast.IsSet = true
 						}
 					}
@@ -776,8 +776,8 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 			if t == "All" || t == "OutErrors" {
 				for _, wi := range *rawIfStats {
 					for _, id := range wi.Interfaces {
-						if id.ID == wDescr {
-							out[i].OutErrors.Value = id.Statistics.TxErrors
+						if *id.ID == wDescr && id.Statistics.TxErrors != nil {
+							out[i].OutErrors.Value = *id.Statistics.TxErrors
 							out[i].OutErrors.IsSet = true
 						}
 					}
