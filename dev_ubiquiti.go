@@ -1122,3 +1122,237 @@ func (sd *deviceUbiquiti) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
 
 	return out, err
 }
+
+// Valid targets values: "All", "Fan", "Power", "Temp", "Ram", "Cpu", "Storage"
+func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[string]sensorVal, error) {
+	out := make(map[string]map[string]map[string]sensorVal)
+
+	rawStats, err := sd.oltStatistics()
+	if err != nil {
+		return out, err
+	}
+
+	t := map[string]bool{
+		"Fan":     false,
+		"Power":   false,
+		"Temp":    false,
+		"Ram":     false,
+		"Cpu":     false,
+		"Storage": false,
+	}
+
+	for _, v := range targets {
+		if v == "All" {
+			for k := range t {
+				t[k] = true
+			}
+		} else if _, ok := t[v]; ok {
+			t[v] = true
+		}
+	}
+
+	for _, s := range *rawStats {
+		if (t["All"] || t["Fan"]) && len(s.Device.FanSpeeds) > 0 {
+			if out["Fan"] == nil {
+				out["Fan"] = make(map[string]map[string]sensorVal)
+			}
+
+			for i, v := range s.Device.FanSpeeds {
+				sName := "Sensor" + strconv.Itoa(i+1)
+				sValue := sensorVal{
+					Unit:    "rpm",
+					Divisor: 100,
+					Value:   int(*v.Value * 100),
+				}
+
+				if out["Fan"]["Speed"] == nil {
+					out["Fan"]["Speed"] = make(map[string]sensorVal)
+				}
+
+				out["Fan"]["Speed"][sName] = sValue
+			}
+		}
+
+		if (t["All"] || t["Temp"]) && len(s.Device.Temperatures) > 0 {
+			if out["Temp"] == nil {
+				out["Temp"] = make(map[string]map[string]sensorVal)
+			}
+
+			for i, v := range s.Device.Temperatures {
+				sName := "Sensor" + strconv.Itoa(i+1)
+				sValue := sensorVal{
+					Unit:    "°C",
+					Divisor: 100,
+					Value:   int(*v.Value * 100),
+				}
+
+				if out["Temp"]["Chasis"] == nil {
+					out["Temp"]["Chasis"] = make(map[string]sensorVal)
+				}
+
+				out["Temp"]["Chasis"][sName] = sValue
+			}
+		}
+
+		if (t["All"] || t["Power"]) && len(s.Device.Power) > 0 {
+			if out["Power"] == nil {
+				out["Power"] = make(map[string]map[string]sensorVal)
+			}
+
+			for i, v := range s.Device.Power {
+				sName := *v.PsuType + strconv.Itoa(i+1)
+
+				if out["Power"][sName] == nil {
+					out["Power"][sName] = make(map[string]sensorVal)
+				}
+
+				if v.Current != nil {
+					sValue := sensorVal{
+						Unit:    "A",
+						Divisor: 100,
+						Value:   int(*v.Current * 100),
+					}
+					out["Power"][sName]["Current"] = sValue
+				}
+
+				if v.Voltage != nil {
+					sValue := sensorVal{
+						Unit:    "V",
+						Divisor: 100,
+						Value:   int(*v.Voltage * 100),
+					}
+					out["Power"][sName]["Voltage"] = sValue
+				}
+
+				if v.Power != nil {
+					sValue := sensorVal{
+						Unit:    "W",
+						Divisor: 100,
+						Value:   int(*v.Power * 100),
+					}
+					out["Power"][sName]["Power"] = sValue
+				}
+
+				if v.Connected != nil {
+					sValue := sensorVal{
+						Bool: *v.Connected,
+					}
+					out["Power"][sName]["Connected"] = sValue
+				}
+			}
+		}
+
+		if (t["All"] || t["Cpu"]) && len(s.Device.CPU) > 0 {
+			if out["Cpu"] == nil {
+				out["Cpu"] = make(map[string]map[string]sensorVal)
+			}
+
+			for _, v := range s.Device.CPU {
+				if out["Cpu"][*v.Identifier] == nil {
+					out["Cpu"][*v.Identifier] = make(map[string]sensorVal)
+				}
+
+				if v.Temperature != nil {
+					sValue := sensorVal{
+						Unit:    "°C",
+						Divisor: 100,
+						Value:   int(*v.Temperature * 100),
+					}
+					out["Cpu"][*v.Identifier]["Temp"] = sValue
+				}
+
+				if v.Usage != nil {
+					sValue := sensorVal{
+						Unit:    "%",
+						Divisor: 100,
+						Value:   int(*v.Usage * 100),
+					}
+					out["Cpu"][*v.Identifier]["Usage"] = sValue
+				}
+			}
+		}
+
+		if (t["All"] || t["Storage"]) && len(s.Device.Storage) > 0 {
+			if out["Storage"] == nil {
+				out["Storage"] = make(map[string]map[string]sensorVal)
+			}
+
+			for _, v := range s.Device.Storage {
+				if out["Storage"][*v.Name] == nil {
+					out["Storage"][*v.Name] = make(map[string]sensorVal)
+				}
+
+				if v.Size != nil {
+					sValue := sensorVal{
+						Unit:    "B",
+						Divisor: 1,
+						Value:   *v.Size,
+					}
+					out["Storage"][*v.Name]["Size"] = sValue
+				}
+
+				if v.SysName != nil {
+					sValue := sensorVal{
+						String: *v.SysName,
+					}
+					out["Storage"][*v.Name]["SysName"] = sValue
+				}
+
+				if v.Temperature != nil {
+					sValue := sensorVal{
+						Unit:    "°C",
+						Divisor: 100,
+						Value:   int(*v.Temperature * 100),
+					}
+					out["Storage"][*v.Name]["Temp"] = sValue
+				}
+
+				if v.Used != nil {
+					sValue := sensorVal{
+						Unit:    "B",
+						Divisor: 1,
+						Value:   *v.Used,
+					}
+					out["Storage"][*v.Name]["Used"] = sValue
+				}
+			}
+		}
+
+		if t["All"] || t["Ram"] {
+			if out["Ram"] == nil {
+				out["Ram"] = make(map[string]map[string]sensorVal)
+			}
+			if out["Ram"]["Status"] == nil {
+				out["Ram"]["Status"] = make(map[string]sensorVal)
+			}
+
+			if s.Device.RAM.Free != nil {
+				sValue := sensorVal{
+					Unit:    "B",
+					Divisor: 1,
+					Value:   *s.Device.RAM.Free,
+				}
+				out["Ram"]["Status"]["Free"] = sValue
+			}
+
+			if s.Device.RAM.Total != nil {
+				sValue := sensorVal{
+					Unit:    "B",
+					Divisor: 1,
+					Value:   *s.Device.RAM.Total,
+				}
+				out["Ram"]["Status"]["Total"] = sValue
+			}
+
+			if s.Device.RAM.Usage != nil {
+				sValue := sensorVal{
+					Unit:    "%",
+					Divisor: 1,
+					Value:   *s.Device.RAM.Usage,
+				}
+				out["Ram"]["Status"]["Usage"] = sValue
+			}
+		}
+	}
+	return out, err
+}

@@ -420,3 +420,10 @@ type rlRadioFeIfInfo struct {
 	PowerIn    valF64
 	PowerOut   valF64
 }
+
+// Device sensor value
+type sensorVal struct {
+	Unit, String   string
+	Value, Divisor int
+	Bool           bool
+}

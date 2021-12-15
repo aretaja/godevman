@@ -80,8 +80,13 @@ type DevBackupInfo interface {
 	LastBackup() (*backupInfo, error)
 }
 
+// Get environment sensors info
+type DevSensors interface {
+	Sensors(targets []string) (map[string]map[string]map[string]sensorVal, error)
+}
+
 // Test interface
 // type DevTest interface {
-// 	OltIfInfo() (*UbiOltInterfaces, error)
-// 	OltStatistics() (*UbiOltStatistics, error)
+//     OltIfInfo() (*UbiOltInterfaces, error)
+//     OltStatistics() (*UbiOltStatistics, error)
 // }
