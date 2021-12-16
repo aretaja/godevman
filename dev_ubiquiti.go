@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net"
 	"net/http"
 	"strconv"
@@ -154,6 +155,145 @@ type UbiOltVlans struct {
 		ID int `json:"id"`
 	} `json:"vlans"`
 }
+
+type UbiOnuInfo struct {
+	Router struct{} `json:"router"`
+	System struct {
+		CPU         *float64 `json:"cpu"`
+		Mem         *float64 `json:"mem"`
+		Temperature struct {
+			CPU *float64 `json:"cpu"`
+		} `json:"temperature"`
+		Uptime  *uint64  `json:"uptime"`
+		Voltage *float64 `json:"voltage"`
+	} `json:"system"`
+	Statistics struct {
+		RxBytes *int64 `json:"rxBytes"`
+		RxRate  *int   `json:"rxRate"`
+		TxBytes *int64 `json:"txBytes"`
+		TxRate  *int   `json:"txRate"`
+	} `json:"statistics"`
+	Mac             *string  `json:"mac"`
+	Error           *string  `json:"error"`
+	FirmwareHash    *string  `json:"firmwareHash"`
+	Serial          *string  `json:"serial"`
+	Connected       *bool    `json:"connected"`
+	FirmwareVersion *string  `json:"firmwareVersion"`
+	TxPower         *float64 `json:"txPower"`
+	OltPort         *int     `json:"oltPort"`
+	LaserBias       *float64 `json:"laserBias"`
+	RxPower         *float64 `json:"rxPower"`
+	Distance        *int     `json:"distance"`
+	ConnectionTime  *uint64  `json:"connectionTime"`
+	Authorized      *bool    `json:"authorized"`
+	UpgradeStatus   struct {
+		FailureReason string `json:"failureReason"`
+		Status        string `json:"status"`
+	} `json:"upgradeStatus"`
+	Ports []struct {
+		ID      *string `json:"id"`
+		Speed   *string `json:"speed"`
+		Plugged *bool   `json:"plugged"`
+	} `json:"ports"`
+}
+
+type UbiOnusInfo []UbiOnuInfo
+
+type UbiOnuSettings struct {
+	Services struct {
+		HTTPPort             *int  `json:"httpPort"`
+		SSHPort              *int  `json:"sshPort"`
+		TelnetPort           *int  `json:"telnetPort"`
+		SSHEnabled           *bool `json:"sshEnabled"`
+		TelnetEnabled        *bool `json:"telnetEnabled"`
+		UbntDiscoveryEnabled *bool `json:"ubntDiscoveryEnabled"`
+	} `json:"services"`
+	BandwidthLimit struct {
+		Download struct {
+			Enabled *bool `json:"enabled"`
+			Limit   *int  `json:"limit"`
+		} `json:"download"`
+		Upload struct {
+			Enabled *bool `json:"enabled"`
+			Limit   *int  `json:"limit"`
+		} `json:"upload"`
+	} `json:"bandwidthLimit"`
+	Enabled        *bool   `json:"enabled"`
+	Name           *string `json:"name"`
+	LanAddress     *string `json:"lanAddress"`
+	Model          *string `json:"model"`
+	Mode           *string `json:"mode"`
+	AdminPassword  *string `json:"adminPassword"`
+	LanProvisioned *bool   `json:"lanProvisioned"`
+	Notes          *string `json:"notes"`
+	Serial         *string `json:"serial"`
+	Wifi           struct {
+		Channel       *string  `json:"channel"`
+		ChannelWidth  *string  `json:"channelWidth"`
+		Country       *string  `json:"country"`
+		CountryListID *string  `json:"countryListId"`
+		TxPower       *float64 `json:"txPower"`
+		Enabled       *bool    `json:"enabled"`
+		Provisioned   *bool    `json:"provisioned"`
+		Networks      []struct {
+			AuthMode *string `json:"authMode"`
+			Key      *string `json:"key"`
+			Ssid     *string `json:"ssid"`
+			HideSSID *bool   `json:"hideSSID"`
+		} `json:"networks"`
+	} `json:"wifi"`
+	Ports []struct {
+		ID    *string `json:"id"`
+		Speed *string `json:"speed"`
+	} `json:"ports"`
+	BridgeMode struct {
+		Ports []struct {
+			Port         *string `json:"port"`
+			NativeVLAN   *int    `json:"nativeVLAN"`
+			IncludeVLANs []int   `json:"includeVLANs"`
+		} `json:"ports"`
+	} `json:"bridgeMode"`
+	RouterMode struct {
+		RouterAdvertisement struct {
+			Mode   *string `json:"mode"`
+			Prefix *string `json:"prefix"`
+		} `json:"routerAdvertisement"`
+		DhcpPool struct {
+			RangeStart *string `json:"rangeStart"`
+			RangeStop  *string `json:"rangeStop"`
+		} `json:"dhcpPool"`
+		PppoePassword    *string       `json:"pppoePassword"`
+		DhcpServerMode   *string       `json:"dhcpServerMode"`
+		WanMode6         *string       `json:"wanMode6"`
+		PppoeUser        *string       `json:"pppoeUser"`
+		WanMode          *string       `json:"wanMode"`
+		Gateway          *string       `json:"gateway"`
+		Gateway6         *string       `json:"gateway6"`
+		DhcpRelay        *string       `json:"dhcpRelay"`
+		LanAddress6      *string       `json:"lanAddress6"`
+		LanMode6         *string       `json:"lanMode6"`
+		WanAddress6      *string       `json:"wanAddress6"`
+		PppoeMode        *string       `json:"pppoeMode"`
+		WanAddress       *string       `json:"wanAddress"`
+		FirewallEnabled6 *bool         `json:"firewallEnabled6"`
+		Ipv6Enabled      *bool         `json:"ipv6Enabled"`
+		DhcpLeaseTime    *int          `json:"dhcpLeaseTime"`
+		WanVLAN          *int          `json:"wanVLAN"`
+		UpnpEnabled      *bool         `json:"upnpEnabled"`
+		WanAccessBlocked *bool         `json:"wanAccessBlocked"`
+		DNSProxyEnabled  *bool         `json:"dnsProxyEnabled"`
+		DNSResolvers     []interface{} `json:"dnsResolvers"`
+		PortForwards     []interface{} `json:"portForwards"`
+		Nat              struct {
+			Ftp  bool `json:"ftp"`
+			Pptp bool `json:"pptp"`
+			Rtsp bool `json:"rtsp"`
+			Sip  bool `json:"sip"`
+		} `json:"nat"`
+	} `json:"routerMode"`
+}
+
+type UbiOnusSettings []UbiOnuSettings
 
 // Get running software version
 func (sd *deviceUbiquiti) SwVersion() (string, error) {
@@ -466,6 +606,84 @@ func (sd *deviceUbiquiti) oltVlans() (*UbiOltVlans, error) {
 
 	// save to cache
 	sd.cache.Set("oltVlans", info, cache.DefaultExpiration)
+
+	return info, nil
+}
+
+// Get all ONU info via web API.
+func (sd *deviceUbiquiti) oltOnus() (*UbiOnusInfo, error) {
+	// return from cache if allowed and cache is present
+	if sd.useCache {
+		if x, found := sd.cache.Get("oltOnus"); found {
+			return x.(*UbiOnusInfo), nil
+		}
+	}
+
+	if err := sd.WebAuth(sd.webSession.cred); err != nil {
+		return nil, fmt.Errorf("error: WebAuth - %s", err)
+	}
+
+	body, err := sd.WebApiGet("gpon/onus")
+	if err != nil {
+		return nil, fmt.Errorf("get request from device api failed: %s", err)
+	}
+
+	err = sd.WebLogout()
+	if err != nil {
+		return nil, fmt.Errorf("errors: WebLogout - %s", err)
+	}
+
+	info := new(UbiOnusInfo)
+	err = json.Unmarshal(body, info)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal ONU info failed: %s", err)
+	}
+
+	if info == nil {
+		return nil, fmt.Errorf("no ONU info")
+	}
+
+	// save to cache
+	sd.cache.Set("oltOnus", info, cache.DefaultExpiration)
+
+	return info, nil
+}
+
+// Get all ONU settings via web API.
+func (sd *deviceUbiquiti) oltOnuSettings() (*UbiOnusSettings, error) {
+	// return from cache if allowed and cache is present
+	if sd.useCache {
+		if x, found := sd.cache.Get("oltOnuSettings"); found {
+			return x.(*UbiOnusSettings), nil
+		}
+	}
+
+	if err := sd.WebAuth(sd.webSession.cred); err != nil {
+		return nil, fmt.Errorf("error: WebAuth - %s", err)
+	}
+
+	body, err := sd.WebApiGet("gpon/onus/settings")
+	if err != nil {
+		return nil, fmt.Errorf("get request from device api failed: %s", err)
+	}
+
+	err = sd.WebLogout()
+	if err != nil {
+		return nil, fmt.Errorf("errors: WebLogout - %s", err)
+	}
+
+	info := new(UbiOnusSettings)
+	err = json.Unmarshal(body, info)
+	if err != nil {
+		return nil, fmt.Errorf("unmarshal ONU settings failed: %s", err)
+	}
+
+	if info == nil {
+		return nil, fmt.Errorf("no ONU settings")
+	}
+
+	// save to cache
+	sd.cache.Set("oltOnuSettings", info, cache.DefaultExpiration)
 
 	return info, nil
 }
@@ -1162,7 +1380,8 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				sValue := sensorVal{
 					Unit:    "rpm",
 					Divisor: 100,
-					Value:   int(*v.Value * 100),
+					Value:   uint64(*v.Value * 100),
+					IsSet:   true,
 				}
 
 				if out["Fan"]["Speed"] == nil {
@@ -1183,7 +1402,11 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				sValue := sensorVal{
 					Unit:    "°C",
 					Divisor: 100,
-					Value:   int(*v.Value * 100),
+					Value:   uint64(math.Abs(*v.Value * 100)),
+					IsSet:   true,
+				}
+				if *v.Value < 0 {
+					sValue.Divisor = -100
 				}
 
 				if out["Temp"]["Chasis"] == nil {
@@ -1210,7 +1433,8 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 					sValue := sensorVal{
 						Unit:    "A",
 						Divisor: 100,
-						Value:   int(*v.Current * 100),
+						Value:   uint64(*v.Current * 100),
+						IsSet:   true,
 					}
 					out["Power"][sName]["Current"] = sValue
 				}
@@ -1219,7 +1443,8 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 					sValue := sensorVal{
 						Unit:    "V",
 						Divisor: 100,
-						Value:   int(*v.Voltage * 100),
+						Value:   uint64(*v.Voltage * 100),
+						IsSet:   true,
 					}
 					out["Power"][sName]["Voltage"] = sValue
 				}
@@ -1228,14 +1453,16 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 					sValue := sensorVal{
 						Unit:    "W",
 						Divisor: 100,
-						Value:   int(*v.Power * 100),
+						Value:   uint64(*v.Power * 100),
+						IsSet:   true,
 					}
 					out["Power"][sName]["Power"] = sValue
 				}
 
 				if v.Connected != nil {
 					sValue := sensorVal{
-						Bool: *v.Connected,
+						Bool:  *v.Connected,
+						IsSet: true,
 					}
 					out["Power"][sName]["Connected"] = sValue
 				}
@@ -1256,8 +1483,13 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 					sValue := sensorVal{
 						Unit:    "°C",
 						Divisor: 100,
-						Value:   int(*v.Temperature * 100),
+						Value:   uint64(math.Abs(*v.Temperature * 100)),
+						IsSet:   true,
 					}
+					if *v.Temperature < 0 {
+						sValue.Divisor = -100
+					}
+
 					out["Cpu"][*v.Identifier]["Temp"] = sValue
 				}
 
@@ -1265,7 +1497,8 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 					sValue := sensorVal{
 						Unit:    "%",
 						Divisor: 100,
-						Value:   int(*v.Usage * 100),
+						Value:   uint64(*v.Usage * 100),
+						IsSet:   true,
 					}
 					out["Cpu"][*v.Identifier]["Usage"] = sValue
 				}
@@ -1286,7 +1519,8 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 					sValue := sensorVal{
 						Unit:    "B",
 						Divisor: 1,
-						Value:   *v.Size,
+						Value:   uint64(*v.Size),
+						IsSet:   true,
 					}
 					out["Storage"][*v.Name]["Size"] = sValue
 				}
@@ -1294,6 +1528,7 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				if v.SysName != nil {
 					sValue := sensorVal{
 						String: *v.SysName,
+						IsSet:  true,
 					}
 					out["Storage"][*v.Name]["SysName"] = sValue
 				}
@@ -1302,8 +1537,13 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 					sValue := sensorVal{
 						Unit:    "°C",
 						Divisor: 100,
-						Value:   int(*v.Temperature * 100),
+						Value:   uint64(math.Abs(*v.Temperature * 100)),
+						IsSet:   true,
 					}
+					if *v.Temperature < 0 {
+						sValue.Divisor = -100
+					}
+
 					out["Storage"][*v.Name]["Temp"] = sValue
 				}
 
@@ -1311,7 +1551,8 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 					sValue := sensorVal{
 						Unit:    "B",
 						Divisor: 1,
-						Value:   *v.Used,
+						Value:   uint64(*v.Used),
+						IsSet:   true,
 					}
 					out["Storage"][*v.Name]["Used"] = sValue
 				}
@@ -1330,7 +1571,8 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				sValue := sensorVal{
 					Unit:    "B",
 					Divisor: 1,
-					Value:   *s.Device.RAM.Free,
+					Value:   uint64(*s.Device.RAM.Free),
+					IsSet:   true,
 				}
 				out["Ram"]["Status"]["Free"] = sValue
 			}
@@ -1339,7 +1581,8 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				sValue := sensorVal{
 					Unit:    "B",
 					Divisor: 1,
-					Value:   *s.Device.RAM.Total,
+					Value:   uint64(*s.Device.RAM.Total),
+					IsSet:   true,
 				}
 				out["Ram"]["Status"]["Total"] = sValue
 			}
@@ -1348,11 +1591,248 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				sValue := sensorVal{
 					Unit:    "%",
 					Divisor: 1,
-					Value:   *s.Device.RAM.Usage,
+					Value:   uint64(*s.Device.RAM.Usage),
+					IsSet:   true,
 				}
 				out["Ram"]["Status"]["Usage"] = sValue
 			}
 		}
 	}
+	return out, err
+}
+
+// Get info from device web API
+// Returns OLT's ONU info
+func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
+	out := make(map[string]*onuInfo)
+
+	oInfo, err := sd.oltOnus()
+	if err != nil {
+		return out, err
+	}
+
+	oSettings, err := sd.oltOnuSettings()
+	if err != nil {
+		return out, err
+	}
+
+	onus := make(map[string]UbiOnuInfo)
+	for _, i := range *oInfo {
+		if i.OltPort == nil {
+			continue
+		}
+		onus[*i.Serial] = i
+	}
+
+	for _, s := range *oSettings {
+		if i, ok := onus[*s.Serial]; ok {
+			o := &onuInfo{
+				OltPort: valString{
+					Value: "pon" + strconv.Itoa(*i.OltPort),
+					IsSet: true,
+				},
+			}
+
+			if s.Model != nil {
+				o.Model.Value = *s.Model
+				o.Model.IsSet = true
+			}
+			if s.Name != nil {
+				o.Name.Value = *s.Name
+				o.Name.IsSet = true
+			}
+			if s.Enabled != nil {
+				o.Enabled.Value = *s.Enabled
+				o.Enabled.IsSet = true
+			}
+			if i.Mac != nil {
+				o.Mac.Value = *i.Mac
+				o.Mac.IsSet = true
+			}
+			if i.Error != nil {
+				o.Error.Value = *i.Error
+				o.Error.IsSet = true
+			}
+			if i.FirmwareVersion != nil {
+				o.Version.Value = *i.FirmwareVersion
+				o.Version.IsSet = true
+			}
+			if i.Connected != nil {
+				o.Online.Value = *i.Connected
+				o.Online.IsSet = true
+			}
+			if i.Statistics.TxBytes != nil {
+				v := sensorVal{
+					Unit:    "B",
+					Divisor: 1,
+					Value:   uint64(*i.Statistics.TxBytes),
+					IsSet:   true,
+				}
+
+				o.TxBytes = v
+			}
+			if i.Statistics.RxBytes != nil {
+				v := sensorVal{
+					Unit:    "B",
+					Divisor: 1,
+					Value:   uint64(*i.Statistics.RxBytes),
+					IsSet:   true,
+				}
+
+				o.RxBytes = v
+			}
+			if i.TxPower != nil {
+				v := sensorVal{
+					Unit:    "dBm",
+					Divisor: 100,
+					Value:   uint64(math.Abs(*i.TxPower * 100)),
+					IsSet:   true,
+				}
+				if *i.TxPower < 0 {
+					v.Divisor = -100
+				}
+
+				o.TxPower = v
+			}
+			if i.RxPower != nil {
+				v := sensorVal{
+					Unit:    "dBm",
+					Divisor: 100,
+					Value:   uint64(math.Abs(*i.RxPower * 100)),
+					IsSet:   true,
+				}
+				if *i.RxPower < 0 {
+					v.Divisor = -100
+				}
+
+				o.RxPower = v
+			}
+			if i.System.Mem != nil {
+				v := sensorVal{
+					Unit:    "%",
+					Divisor: 1,
+					Value:   uint64(*i.System.Mem),
+					IsSet:   true,
+				}
+
+				o.Ram = v
+			}
+			if i.Distance != nil {
+				v := sensorVal{
+					Unit:    "m",
+					Divisor: 1,
+					Value:   uint64(*i.Distance),
+					IsSet:   true,
+				}
+
+				o.Distance = v
+			}
+			if i.System.Temperature.CPU != nil {
+				v := sensorVal{
+					Unit:    "°C",
+					Divisor: 100,
+					Value:   uint64(math.Abs(*i.System.Temperature.CPU * 100)),
+					IsSet:   true,
+				}
+				if *i.System.Temperature.CPU < 0 {
+					v.Divisor = -100
+				}
+
+				o.CpuTemp = v
+			}
+			if i.System.CPU != nil {
+				v := sensorVal{
+					Unit:    "%",
+					Divisor: 1,
+					Value:   uint64(*i.System.CPU),
+					IsSet:   true,
+				}
+
+				o.CpuUsage = v
+			}
+			if s.BandwidthLimit.Download.Limit != nil && s.BandwidthLimit.Download.Enabled != nil && *s.BandwidthLimit.Download.Enabled {
+				v := sensorVal{
+					Unit:    "B",
+					Divisor: 1,
+					Value:   uint64(*s.BandwidthLimit.Download.Limit),
+					IsSet:   true,
+				}
+
+				o.DownLimit = v
+			}
+			if s.BandwidthLimit.Upload.Limit != nil && s.BandwidthLimit.Upload.Enabled != nil && *s.BandwidthLimit.Upload.Enabled {
+				v := sensorVal{
+					Unit:    "B",
+					Divisor: 1,
+					Value:   uint64(*s.BandwidthLimit.Upload.Limit),
+					IsSet:   true,
+				}
+
+				o.Uplimit = v
+			}
+			if i.System.Uptime != nil {
+				o.UpTime.Value = *i.System.Uptime
+				o.UpTime.IsSet = true
+				o.UpTimeStr.Value = UpTimeString(*i.System.Uptime*100, 0)
+				o.UpTimeStr.IsSet = true
+			}
+			if i.ConnectionTime != nil {
+				o.ConTime.Value = *i.ConnectionTime
+				o.ConTime.IsSet = true
+				o.ConTimeStr.Value = UpTimeString(*i.ConnectionTime*100, 0)
+				o.ConTimeStr.IsSet = true
+			}
+			if i.Ports != nil {
+				o.Ports = make(map[string]onuPort)
+				for _, p := range i.Ports {
+					pi := new(onuPort)
+					if p.Plugged != nil {
+						pi.Plugged.Value = *p.Plugged
+						pi.Plugged.IsSet = true
+					}
+					if p.Speed != nil {
+						pi.Speed.Value = *p.Speed
+						pi.Speed.IsSet = true
+					}
+					if p.ID != nil {
+						pi.Id.Value = *p.ID
+						pi.Id.IsSet = true
+
+						o.Ports[*p.ID] = *pi
+					}
+				}
+
+				for _, p := range s.Ports {
+					if p.ID != nil {
+						if _, ok := o.Ports[*p.ID]; ok {
+							pi := o.Ports[*p.ID]
+							pi.Mode.Value = *p.Speed
+							pi.Mode.IsSet = true
+							o.Ports[*p.ID] = pi
+						}
+					}
+				}
+
+				for _, p := range s.BridgeMode.Ports {
+					if p.Port != nil {
+						if _, ok := o.Ports[*p.Port]; ok {
+							pi := o.Ports[*p.Port]
+							pi.NativeVlan.Value = *p.NativeVLAN
+							pi.NativeVlan.IsSet = true
+							pi.Vlans = append(pi.Vlans, *p.NativeVLAN)
+
+							if p.IncludeVLANs != nil {
+								pi.Vlans = append(pi.Vlans, p.IncludeVLANs...)
+							}
+							o.Ports[*p.Port] = pi
+						}
+					}
+				}
+			}
+
+			out[*s.Serial] = o
+		}
+	}
+
 	return out, err
 }

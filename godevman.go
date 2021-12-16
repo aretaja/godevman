@@ -423,7 +423,43 @@ type rlRadioFeIfInfo struct {
 
 // Device sensor value
 type sensorVal struct {
-	Unit, String   string
-	Value, Divisor int
-	Bool           bool
+	Unit, String string
+	Value        uint64
+	Divisor      int
+	Bool         bool
+	IsSet        bool
+}
+
+// Onu info
+type onuPort struct {
+	Id, Speed, Mode valString
+	Vlans           []int
+	Plugged         valBool
+	NativeVlan      valInt
+}
+
+type onuInfo struct {
+	Model      valString
+	Mac        valString
+	UpTimeStr  valString
+	ConTimeStr valString
+	Error      valString
+	Version    valString
+	OltPort    valString
+	Name       valString
+	Ports      map[string]onuPort
+	TxBytes    sensorVal
+	TxPower    sensorVal
+	RxPower    sensorVal
+	Ram        sensorVal
+	Distance   sensorVal
+	CpuTemp    sensorVal
+	CpuUsage   sensorVal
+	DownLimit  sensorVal
+	Uplimit    sensorVal
+	RxBytes    sensorVal
+	ConTime    valU64
+	UpTime     valU64
+	Online     valBool
+	Enabled    valBool
 }

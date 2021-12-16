@@ -85,6 +85,11 @@ type DevSensors interface {
 	Sensors(targets []string) (map[string]map[string]map[string]sensorVal, error)
 }
 
+// Get ONU info
+type DevOnus interface {
+	OnuInfo() (map[string]*onuInfo, error)
+}
+
 // Test interface
 // type DevTest interface {
 //     OltIfInfo() (*UbiOltInterfaces, error)
