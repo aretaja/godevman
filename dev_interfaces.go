@@ -5,6 +5,10 @@ import "net/http"
 // Get system info
 type DevSys interface {
 	System(targets []string) (system, error)
+}
+
+// Set system info
+type DevSysWriter interface {
 	SetSysName(v string) error
 	SetContact(v string) error
 	SetLocation(v string) error
@@ -88,6 +92,11 @@ type DevSensors interface {
 // Get ONU info
 type DevOnus interface {
 	OnuInfo() (map[string]*onuInfo, error)
+}
+
+// Get energy readings
+type DevEnergyMeter interface {
+	Ereadings() (*eReadings, error)
 }
 
 // Test interface

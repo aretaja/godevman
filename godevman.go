@@ -94,7 +94,7 @@ func NewDevice(p *Dparams) (*device, error) {
 		}
 	}
 
-	if set, _ := regexp.Match(`^no-snmp`, []byte(p.SysObjectId)); !set && p.SnmpCred.User != "" {
+	if set := strings.HasPrefix(p.SysObjectId, "no-snmp"); !set && p.SnmpCred.User != "" {
 		// Session variables
 		session := snmphelper.Session{
 			Host:     p.Ip,
@@ -169,10 +169,10 @@ func (d *device) Morph() interface{} {
 
 	if strings.HasPrefix(d.sysObjectId, ".") {
 		// HACK for broken SNMP implementation in STULZ WIB1000 devices
-		if d.sysObjectId == "0.0" {
+		if d.sysObjectId == ".0.0" {
 			_, err := d.snmpSession.Get([]string{".1.3.6.1.4.1.39983.1.1.1.1.0"})
 			if err == nil {
-				d.sysObjectId = "1.3.6.1.4.1.39983.1.1"
+				d.sysObjectId = ".1.3.6.1.4.1.39983.1.1"
 			}
 		}
 
@@ -276,6 +276,11 @@ func (d *device) Morph() interface{} {
 			res = &md
 		default:
 			res = &snmpCommon{*d}
+		}
+	} else if strings.HasPrefix(d.sysObjectId, "no-snmp") {
+		switch {
+		case d.sysObjectId == "no-snmp-ecs":
+			res = &deviceEcsEmeter{*d}
 		}
 	}
 
@@ -462,4 +467,10 @@ type onuInfo struct {
 	UpTime     valU64
 	Online     valBool
 	Enabled    valBool
+}
+
+// Energy Readings
+type eReadings struct {
+	day, night sensorVal
+	timeStamp  uint
 }
