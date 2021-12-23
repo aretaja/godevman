@@ -141,6 +141,7 @@ type UbiOltStatistics []struct {
 	Timestamp int64 `json:"timestamp"`
 }
 
+// Ubiquiti specific VLANs type used by device web API
 type UbiOltVlans struct {
 	Trunks []interface{} `json:"trunks"`
 	Vlans  []struct {
@@ -156,6 +157,7 @@ type UbiOltVlans struct {
 	} `json:"vlans"`
 }
 
+// Ubiquiti specific ONU info type used by device web API
 type UbiOnuInfo struct {
 	Router struct{} `json:"router"`
 	System struct {
@@ -199,6 +201,7 @@ type UbiOnuInfo struct {
 
 type UbiOnusInfo []UbiOnuInfo
 
+// Ubiquiti specific ONU settings type used by device web API
 type UbiOnuSettings struct {
 	Services struct {
 		HTTPPort             *int  `json:"httpPort"`
