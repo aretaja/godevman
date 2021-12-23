@@ -2,8 +2,10 @@ package godevman
 
 import (
 	"fmt"
+	"io"
 	"math/bits"
 	"math/rand"
+	"net"
 	"time"
 )
 
@@ -671,4 +673,40 @@ func RandomString(l int) string {
 	}
 
 	return string(b)
+}
+
+// Make TCP request (Timeout 10s)
+func TcpReq(req, host, port string) ([]byte, error) {
+	// connect to this socket
+	con, err := net.DialTimeout("tcp", host+":"+port, 10*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("socket connection error: %s", err.Error())
+	}
+
+	defer con.Close()
+
+	// set deadlines
+	err = con.SetReadDeadline(time.Now().Add(10 * time.Second))
+	if err != nil {
+		return nil, fmt.Errorf("socket set read timeout: %s", err.Error())
+	}
+
+	err = con.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	if err != nil {
+		return nil, fmt.Errorf("socket set send timeout: %s", err.Error())
+	}
+
+	// send to socket
+	_, err = con.Write([]byte(req))
+	if err != nil {
+		return nil, fmt.Errorf("socket send error: %s", err.Error())
+	}
+
+	// listen for reply
+	res, err := io.ReadAll(con)
+	if err != nil {
+		return res, fmt.Errorf("socket read response error: %s", err.Error())
+	}
+
+	return res, nil
 }
