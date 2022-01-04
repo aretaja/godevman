@@ -35,7 +35,8 @@ type Dparams struct {
 	Ip          string // ip of device
 	SysObjectId string // sysObjectId of Device
 	SnmpCred    SnmpCred
-	Webcred     []string // Websession credentials
+	WebCred     []string // Websession credentials
+	CliCred     []string // CLI session credentials
 }
 
 // Websession parameters
@@ -81,8 +82,8 @@ func NewDevice(p *Dparams) (*device, error) {
 		client: nil,
 		cred:   nil,
 	}
-	if p.Webcred != nil {
-		d.webSession.cred = p.Webcred
+	if p.WebCred != nil {
+		d.webSession.cred = p.WebCred
 	}
 
 	// validate sysObjectId if defined
