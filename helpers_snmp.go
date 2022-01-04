@@ -10,7 +10,7 @@ import (
 // Single oid get helper
 func (sd *snmpCommon) getone(oid string) (snmphelper.SnmpOut, error) {
 	o := []string{oid}
-	res, err := sd.snmpsession.Get(o)
+	res, err := sd.snmpSession.Get(o)
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +28,7 @@ func (sd *snmpCommon) getmulti(oid string, idx []string) (snmphelper.SnmpOut, er
 		}
 
 		// Don't query more oids than "MaxRepetitions" value or 5 if 0
-		maxOids := int(sd.snmpsession.MaxRepetitions)
+		maxOids := int(sd.snmpSession.MaxRepetitions)
 		if maxOids < 1 {
 			maxOids = 5
 		}
@@ -42,7 +42,7 @@ func (sd *snmpCommon) getmulti(oid string, idx []string) (snmphelper.SnmpOut, er
 			}
 
 			oids := alloids[f:t]
-			r, err := sd.snmpsession.Get(oids)
+			r, err := sd.snmpSession.Get(oids)
 			if err != nil {
 				return nil, err
 			}
@@ -55,7 +55,7 @@ func (sd *snmpCommon) getmulti(oid string, idx []string) (snmphelper.SnmpOut, er
 		return res, nil
 	}
 
-	res, err := sd.snmpsession.Walk(oid, true, false)
+	res, err := sd.snmpSession.Walk(oid, true, false)
 	if err != nil && sd.handleErr(oid, err) {
 		return nil, err
 	}

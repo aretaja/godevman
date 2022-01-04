@@ -93,7 +93,7 @@ func (sd *snmpCommon) IfNumber() (int64, error) {
 // Get info from .iso.org.dod.internet.mgmt.mib-2.interfaces.ifTable and .iso.org.dod.internet.mgmt.mib-2.ifMIB.ifMIBObjects.ifXTable
 // Valid targets values: "All", "AllNoIfx", "Descr", "Name", "Alias", "Type", "Mtu", "Speed", "Mac",
 // "Admin", "Oper", "Last", "InOctets", "InUcast", "InMcast", "InBcast", "InDiscards", "InErrors",
-// "OutOctets", "OutUcast", "OutMast", "OutBcast", "OutDiscards", "OutErrors"
+// "OutOctets", "OutUcast", "OutMcast", "OutBcast", "OutDiscards", "OutErrors"
 func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInfo, error) {
 	out := make(map[string]*ifInfo)
 	iftable := ".1.3.6.1.2.1.2.2.1."
@@ -314,8 +314,8 @@ func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInf
 				out[i].OutUcast.IsSet = true
 			case strings.Contains(o, ifxtable+"12."):
 				i := mapEntry(o, ifxtable+"12.")
-				out[i].OutMast.Value = d.Counter64
-				out[i].OutMast.IsSet = true
+				out[i].OutMcast.Value = d.Counter64
+				out[i].OutMcast.IsSet = true
 			case strings.Contains(o, ifxtable+"13."):
 				i := mapEntry(o, ifxtable+"13.")
 				out[i].OutBcast.Value = d.Counter64
@@ -344,7 +344,7 @@ func (sd *snmpCommon) IfStack() (ifStack, error) {
 
 	oid := ".1.3.6.1.2.1.31.1.2.1.3"
 
-	r, err := sd.snmpsession.Walk(oid, true, true)
+	r, err := sd.snmpSession.Walk(oid, true, true)
 	if err != nil && sd.handleErr(oid, err) {
 		return out, err
 	}
@@ -512,7 +512,7 @@ func (sd *snmpCommon) IfInventory() (map[int]int, error) {
 
 	oid := ".1.3.6.1.2.1.47.1.3.2.1.2"
 
-	r, err := sd.snmpsession.Walk(oid, true, true)
+	r, err := sd.snmpSession.Walk(oid, true, true)
 	if err != nil && sd.handleErr(oid, err) {
 		return out, err
 	}
@@ -539,7 +539,7 @@ func (sd *snmpCommon) BrPort2IfIdx() (map[string]int, error) {
 
 	oid := ".1.3.6.1.2.1.17.1.4.1.2"
 
-	r, err := sd.snmpsession.Walk(oid, true, true)
+	r, err := sd.snmpSession.Walk(oid, true, true)
 	if err != nil && sd.handleErr(oid, err) {
 		return out, err
 	}
@@ -558,7 +558,7 @@ func (sd *snmpCommon) D1qVlans() (map[string]string, error) {
 
 	oid := ".1.3.6.1.2.1.17.7.1.4.3.1.1"
 
-	r, err := sd.snmpsession.Walk(oid, true, true)
+	r, err := sd.snmpSession.Walk(oid, true, true)
 	if err != nil && sd.handleErr(oid, err) {
 		return out, err
 	}
@@ -590,7 +590,7 @@ func (sd *snmpCommon) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 
 	// get vlan member ports
 	for i, mOid := range mOids {
-		mr, err := sd.snmpsession.Walk(mOid, true, true)
+		mr, err := sd.snmpSession.Walk(mOid, true, true)
 		if err != nil {
 			if i == 0 {
 				continue
@@ -627,7 +627,7 @@ func (sd *snmpCommon) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 
 	// get vlan untagged member ports
 	for i, uOid := range uOids {
-		ur, err := sd.snmpsession.Walk(uOid, true, true)
+		ur, err := sd.snmpSession.Walk(uOid, true, true)
 		if err != nil {
 			if i == 0 {
 				continue
@@ -660,25 +660,10 @@ func (sd *snmpCommon) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 }
 
 // Get info from .iso.org.dod.internet.mgmt.mib-2.ip.ipAddrTable
-// Valid targets values: "All", "Mask", "IfIdx"
-func (sd *snmpCommon) IpInfo(targets []string, ip ...string) (map[string]*ipInfo, error) {
+func (sd *snmpCommon) IpInfo(ip ...string) (map[string]*ipInfo, error) {
 	out := make(map[string]*ipInfo)
 	ipTable := ".1.3.6.1.2.1.4.20.1."
-	var oids []string
-
-	allOids := []string{ipTable + "2", ipTable + "3"}
-
-	for _, t := range targets {
-		switch t {
-		case "All":
-			oids = allOids
-			continue
-		case "Mask":
-			oids = append(oids, ipTable+"2")
-		case "IfIdx":
-			oids = append(oids, ipTable+"3")
-		}
-	}
+	oids := []string{ipTable + "2", ipTable + "3"}
 
 	mapEntry := func(oid, prefix string) string {
 		i := strings.TrimPrefix(oid, prefix)
@@ -722,7 +707,7 @@ func (sd *snmpCommon) IpInfo(targets []string, ip ...string) (map[string]*ipInfo
 func (sd *snmpCommon) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
 	out := make(map[string]*ipIfInfo)
 
-	ipInfo, err := sd.IpInfo([]string{"All"}, ip...)
+	ipInfo, err := sd.IpInfo(ip...)
 	if err != nil {
 		return out, err
 	}
@@ -778,7 +763,7 @@ func (sd *snmpCommon) OspfAreaRouters() (map[string][]string, error) {
 
 	oid := ".1.3.6.1.2.1.14.4.1.1"
 
-	r, err := sd.snmpsession.Walk(oid, true, true)
+	r, err := sd.snmpSession.Walk(oid, true, true)
 	if err != nil && sd.handleErr(oid, err) {
 		return out, err
 	}
@@ -802,7 +787,7 @@ func (sd *snmpCommon) OspfAreaStatus() (map[string]string, error) {
 	var out = make(map[string]string)
 
 	oid := ".1.3.6.1.2.1.14.2.1.10"
-	r, err := sd.snmpsession.Walk(oid, true, true)
+	r, err := sd.snmpSession.Walk(oid, true, true)
 	if err != nil && sd.handleErr(oid, err) {
 		return out, err
 	}
@@ -829,12 +814,12 @@ func (sd *snmpCommon) OspfAreaStatus() (map[string]string, error) {
 }
 
 // Get info from .iso.org.dod.internet.mgmt.mib-2.ospf.ospfAreaTable
-// Returns OSPF area status map.
+// Returns OSPF neighbour status map.
 func (sd *snmpCommon) OspfNbrStatus() (map[string]string, error) {
 	var out = make(map[string]string)
 
 	oid := ".1.3.6.1.2.1.14.10.1.6"
-	r, err := sd.snmpsession.Walk(oid, true, true)
+	r, err := sd.snmpSession.Walk(oid, true, true)
 	if err != nil && sd.handleErr(oid, err) {
 		return out, err
 	}
@@ -891,7 +876,7 @@ func (sd *snmpCommon) SetIfAdmStat(set map[string]string) error {
 		pdus = append(pdus, pdu)
 	}
 
-	r, err := sd.snmpsession.Set(pdus)
+	r, err := sd.snmpSession.Set(pdus)
 	if err != nil {
 		return err
 	}
@@ -918,7 +903,7 @@ func (sd *snmpCommon) SetIfAlias(set map[string]string) error {
 		pdus = append(pdus, pdu)
 	}
 
-	r, err := sd.snmpsession.Set(pdus)
+	r, err := sd.snmpSession.Set(pdus)
 	if err != nil {
 		return err
 	}
@@ -941,7 +926,7 @@ func (sd *snmpCommon) SetSysName(v string) error {
 		},
 	}
 
-	r, err := sd.snmpsession.Set(pdus)
+	r, err := sd.snmpSession.Set(pdus)
 	if err != nil {
 		return err
 	}
@@ -964,7 +949,7 @@ func (sd *snmpCommon) SetContact(v string) error {
 		},
 	}
 
-	r, err := sd.snmpsession.Set(pdus)
+	r, err := sd.snmpSession.Set(pdus)
 	if err != nil {
 		return err
 	}
@@ -987,7 +972,7 @@ func (sd *snmpCommon) SetLocation(v string) error {
 		},
 	}
 
-	r, err := sd.snmpsession.Set(pdus)
+	r, err := sd.snmpSession.Set(pdus)
 	if err != nil {
 		return err
 	}

@@ -1,8 +1,14 @@
 package godevman
 
+import "net/http"
+
 // Get system info
 type DevSys interface {
 	System(targets []string) (system, error)
+}
+
+// Set system info
+type DevSysWriter interface {
 	SetSysName(v string) error
 	SetContact(v string) error
 	SetLocation(v string) error
@@ -39,7 +45,7 @@ type DevVlan interface {
 
 // Functionality related to IP addresses
 type DevIp interface {
-	IpInfo(targets []string, ip ...string) (map[string]*ipInfo, error)
+	IpInfo(ip ...string) (map[string]*ipInfo, error)
 	IpIfInfo(ip ...string) (map[string]*ipIfInfo, error)
 }
 
@@ -59,3 +65,42 @@ type DevOspf interface {
 type DevSw interface {
 	SwVersion() (string, error)
 }
+
+// Functionality related to web connection authentication
+type DevWebSess interface {
+	WebAuth(userPass []string) error
+	WebSession() *http.Client
+	WebLogout() error
+}
+
+// Get RL neighbour info
+type DevRl interface {
+	RlInfo() (map[string]*rlRadioIfInfo, error)
+	RlNbrInfo() (map[string]*rlRadioFeIfInfo, error)
+}
+
+// Get backup info
+type DevBackupInfo interface {
+	LastBackup() (*backupInfo, error)
+}
+
+// Get environment sensors info
+type DevSensors interface {
+	Sensors(targets []string) (map[string]map[string]map[string]sensorVal, error)
+}
+
+// Get ONU info
+type DevOnus interface {
+	OnuInfo() (map[string]*onuInfo, error)
+}
+
+// Get energy readings
+type DevEnergyMeter interface {
+	Ereadings() (*eReadings, error)
+}
+
+// Test interface
+// type DevTest interface {
+//     OltIfInfo() (*UbiOltInterfaces, error)
+//     OltStatistics() (*UbiOltStatistics, error)
+// }
