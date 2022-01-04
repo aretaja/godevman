@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/PraserX/ipconv"
+	"github.com/praserx/ipconv"
 )
 
 // Adds Ericsson MINI-LINK PT specific SNMP functionality to snmpCommon type
