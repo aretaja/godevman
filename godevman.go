@@ -13,6 +13,7 @@ import (
 
 	"github.com/aretaja/snmphelper"
 	"github.com/davecgh/go-spew/spew"
+	expect "github.com/google/goexpect"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -30,32 +31,60 @@ type SnmpCred struct {
 	Ver      int    // [snmp version] (1|2|3)
 }
 
+// CLI session parameters
+type CliParams struct {
+	// Prompt re pattern
+	// Default depends on device type
+	// Keep it as is if you are not sure
+	PromptRe string
+	// Default "22" for ssh and "23" for telnet
+	Port string
+	// CLI session credentials
+	Cred []string
+	// Commands which will be executed first on session start
+	// Default depends on device type
+	// Keep it as is if you are not sure
+	PreCmds []string
+	// Use telnet instead of ssh. Default false
+	Telnet bool
+	// Session timeout (sec)
+	// Depends on device type
+	// Keep it as is if you are not sure
+	Timeout int
+}
+
 // Parameters for new Device object initialization
 type Dparams struct {
 	Ip          string // ip of device
 	SysObjectId string // sysObjectId of Device
 	SnmpCred    SnmpCred
 	WebCred     []string // Websession credentials
-	CliCred     []string // CLI session credentials
+	CliParams   CliParams
 }
 
-// Websession parameters
+// Websession
 type webSess struct {
 	client *http.Client // web client of device
 	cred   []string     // web session credentials
 }
 
+// Clisession
+type cliSess struct {
+	client *expect.GExpect // cli expecter of device
+	params *CliParams      // cli session parameters
+}
+
 // Device object
 type device struct {
 	snmpSession *snmphelper.Session // snmp session of device
-	// clisession  devicecli.Dcli   // cli session of device
-	webSession  *webSess     // web session of device
-	cache       *cache.Cache // Cache object
-	ip          string       // ip of device
-	sysName     string       // sysname of device
-	sysObjectId string       // sysObjectId of device
-	debug       int          // Debug level
-	useCache    bool         // Enable use of cache
+	webSession  *webSess            // web session data of device
+	cliSession  *cliSess            // cli session data of device
+	cache       *cache.Cache        // Cache object
+	ip          string              // ip of device
+	sysName     string              // sysname of device
+	sysObjectId string              // sysObjectId of device
+	debug       int                 // Debug level
+	useCache    bool                // Enable use of cache
 }
 
 // Initialize new device object
@@ -78,12 +107,15 @@ func NewDevice(p *Dparams) (*device, error) {
 	}
 
 	// Setup Web session data
-	d.webSession = &webSess{
-		client: nil,
-		cred:   nil,
-	}
+	d.webSession = new(webSess)
 	if p.WebCred != nil {
 		d.webSession.cred = p.WebCred
+	}
+
+	// Setup CLI session data
+	d.cliSession = new(cliSess)
+	if p.CliParams.Cred != nil {
+		d.cliSession.params = &p.CliParams
 	}
 
 	// validate sysObjectId if defined

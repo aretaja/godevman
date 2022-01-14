@@ -3,39 +3,42 @@ package godevman
 import "net/http"
 
 // Get system info
-type DevSys interface {
-	System(targets []string) (system, error)
+type DevSysReader interface {
+	System([]string) (system, error)
 }
 
 // Set system info
 type DevSysWriter interface {
-	SetSysName(v string) error
-	SetContact(v string) error
-	SetLocation(v string) error
+	SetSysName(string) error
+	SetContact(string) error
+	SetLocation(string) error
 }
 
 // Functionality related to interfaces
-type DevIfs interface {
-	IfInfo(targets []string, idx ...string) (map[string]*ifInfo, error)
+type DevIfReader interface {
+	IfInfo([]string, ...string) (map[string]*ifInfo, error)
 	// Get ifNumber
 	IfNumber() (int64, error)
 	// Get interfaces stack info
 	IfStack() (ifStack, error)
+}
+
+type DevIfWriter interface {
 	// Set interface admin status
-	SetIfAdmStat(set map[string]string) error
+	SetIfAdmStat(map[string]string) error
 	// Set interface alias
-	SetIfAlias(set map[string]string) error
+	SetIfAlias(map[string]string) error
 }
 
 // Functionality related to inventory
-type DevInv interface {
-	InvInfo(targets []string, idx ...string) (map[string]*invInfo, error)
+type DevInvReader interface {
+	InvInfo([]string, ...string) (map[string]*invInfo, error)
 	// Get interface to inventory relations
 	IfInventory() (map[int]int, error)
 }
 
 // Functionality related to dot1q vlans
-type DevVlan interface {
+type DevVlanReader interface {
 	D1qVlans() (map[string]string, error)
 	// Get dot1q vlans
 	BrPort2IfIdx() (map[string]int, error)
@@ -44,63 +47,68 @@ type DevVlan interface {
 }
 
 // Functionality related to IP addresses
-type DevIp interface {
-	IpInfo(ip ...string) (map[string]*ipInfo, error)
-	IpIfInfo(ip ...string) (map[string]*ipIfInfo, error)
+type DevIpReader interface {
+	IpInfo(...string) (map[string]*ipInfo, error)
+	IpIfInfo(...string) (map[string]*ipIfInfo, error)
 }
 
 // Functionality related to Get IPv6 addresses
-type DevIp6 interface {
-	Ip6IfDescr(idx ...string) (map[string]string, error)
+type DevIp6Reader interface {
+	Ip6IfDescr(...string) (map[string]string, error)
 }
 
 // Get OSPF info
-type DevOspf interface {
+type DevOspfReader interface {
 	OspfAreaRouters() (map[string][]string, error)
 	OspfAreaStatus() (map[string]string, error)
 	OspfNbrStatus() (map[string]string, error)
 }
 
 // Get Software version
-type DevSw interface {
+type DevSwReader interface {
 	SwVersion() (string, error)
 }
 
 // Functionality related to web connection authentication
-type DevWebSess interface {
-	WebAuth(userPass []string) error
+type DevWebSessManager interface {
+	WebAuth([]string) error
 	WebSession() *http.Client
 	WebLogout() error
 }
 
 // Get RL neighbour info
-type DevRl interface {
+type DevRlReader interface {
 	RlInfo() (map[string]*rlRadioIfInfo, error)
 	RlNbrInfo() (map[string]*rlRadioFeIfInfo, error)
 }
 
 // Get backup info
-type DevBackupInfo interface {
+type DevBackupReader interface {
 	LastBackup() (*backupInfo, error)
 }
 
 // Get environment sensors info
-type DevSensors interface {
-	Sensors(targets []string) (map[string]map[string]map[string]sensorVal, error)
+type DevSensorsReader interface {
+	Sensors([]string) (map[string]map[string]map[string]sensorVal, error)
 }
 
 // Get ONU info
-type DevOnus interface {
+type DevOnusReader interface {
 	OnuInfo() (map[string]*onuInfo, error)
 }
 
 // Get energy readings
-type DevEnergyMeter interface {
+type DevEnergyMeterReader interface {
 	Ereadings() (*eReadings, error)
+}
+
+// CLI releated functionality
+type DevCliWriter interface {
+	// Execute cli commands
+	RunCmds([]string) ([]string, error)
 }
 
 // Test interface
 // type DevTest interface {
-//     OltIfInfo() (*UbiOltInterfaces, error)
-//     OltStatistics() (*UbiOltStatistics, error)
+// 	TestCmd([]string) ([]string, error)
 // }
