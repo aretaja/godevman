@@ -95,10 +95,11 @@ func (sd *deviceMikrotik) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 		return out, err
 	}
 
-	for vlan, ifs := range info {
+	for vlan, data := range info {
 		vi := &d1qVlanInfo{
 			Ports: make(map[int]*d1qVlanBrPort),
 		}
+
 		// parameter present check
 		paramValue := func(s string, m map[string]string) string {
 			if c, ok := m[s]; ok {
@@ -107,26 +108,79 @@ func (sd *deviceMikrotik) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 			return ""
 		}
 
-		for _, i := range ifs {
+		for _, i := range data {
 			if vi.Name == "" {
 				vi.Name = paramValue("name", i)
 			}
 
 			com := paramValue("comment", i)
 			if com != "" {
-				vi.Name = vi.Name + "; " + com
+				if vi.Name == "" {
+					vi.Name = com
+				} else {
+					vi.Name = vi.Name + "; " + com
+				}
 			}
 
-			if ifIdx, ok := ifdescrIndex[paramValue("interface", i)]; ok {
-				p := &d1qVlanBrPort{
-					IfIdx: ifIdx,
-				}
+			if paramValue("interface", i) != "" {
+				ports := strings.Split(paramValue("interface", i), ",")
+				for _, port := range ports {
+					if ifIdx, ok := ifdescrIndex[port]; ok {
+						if _, ok := vi.Ports[ifIdx]; !ok {
+							vi.Ports[ifIdx] = &d1qVlanBrPort{
+								IfIdx: ifIdx,
+							}
+						}
 
-				if paramValue("use-service-tag", i) == "no" {
-					p.UnTag = true
+						p := vi.Ports[ifIdx]
+						if paramValue("use-service-tag", i) == "no" {
+							p.UnTag = true
+						}
+					}
 				}
-
-				vi.Ports[ifIdx] = p
+			} else if paramValue("ports", i) != "" {
+				ports := strings.Split(paramValue("ports", i), ",")
+				for _, port := range ports {
+					if ifIdx, ok := ifdescrIndex[port]; ok {
+						if _, ok := vi.Ports[ifIdx]; !ok {
+							vi.Ports[ifIdx] = &d1qVlanBrPort{
+								IfIdx: ifIdx,
+								UnTag: true,
+							}
+						}
+					}
+				}
+			} else if paramValue("tagged", i) != "" || paramValue("untagged", i) != "" {
+				ports := strings.Split(paramValue("tagged", i), ",")
+				for _, port := range ports {
+					if ifIdx, ok := ifdescrIndex[port]; ok {
+						if _, ok := vi.Ports[ifIdx]; !ok {
+							vi.Ports[ifIdx] = &d1qVlanBrPort{
+								IfIdx: ifIdx,
+							}
+						}
+					}
+				}
+				ports = strings.Split(paramValue("untagged", i), ",")
+				for _, port := range ports {
+					if ifIdx, ok := ifdescrIndex[port]; ok {
+						if _, ok := vi.Ports[ifIdx]; !ok {
+							vi.Ports[ifIdx] = &d1qVlanBrPort{
+								IfIdx: ifIdx,
+								UnTag: true,
+							}
+						}
+					}
+				}
+			} else if paramValue("tagged-ports", i) != "" {
+				ports := strings.Split(paramValue("tagged-ports", i), ",")
+				for _, port := range ports {
+					if ifIdx, ok := ifdescrIndex[port]; ok {
+						if _, ok := vi.Ports[ifIdx]; ok {
+							vi.Ports[ifIdx].UnTag = false
+						}
+					}
+				}
 			}
 		}
 
@@ -166,23 +220,38 @@ func (sd *deviceMikrotik) RunCmds(c []string) ([]string, error) {
 func (sd *deviceMikrotik) vlanInfo() (map[string][]map[string]string, error) {
 	var vlans = make(map[string][]map[string]string)
 
-	cmds := []string{"/interface vlan print detail terse", "/quit"}
+	cmds := []string{
+		"/interface vlan print detail terse",
+		"/interface ethernet switch vlan print terse detail",
+		"/interface bridge vlan print terse detail",
+		"/interface ethernet switch egress-vlan-tag print terse detail",
+		"/quit",
+	}
 
 	r, err := sd.RunCmds(cmds)
 	if err != nil {
 		return vlans, fmt.Errorf("cli command error: %v", err)
 	}
 
-	rows := SplitLineEnd(r[1])
+	var rows []string
+	for i, s := range r {
+		if i%2 == 0 {
+			continue
+		}
+		rows = append(rows, SplitLineEnd(s)...)
+	}
 
 	for _, row := range rows {
-		if !strings.Contains(row, "vlan-id=") {
+		if !strings.Contains(row, "vlan-id=") && !strings.Contains(row, "vlan-ids=") {
 			continue
 		}
 
 		params := sd.terseParser(row)
 
 		if vlan, ok := params["vlan-id"]; ok {
+			vlans[vlan] = append(vlans[vlan], params)
+		}
+		if vlan, ok := params["vlan-ids"]; ok {
 			vlans[vlan] = append(vlans[vlan], params)
 		}
 	}
