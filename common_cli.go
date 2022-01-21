@@ -18,7 +18,7 @@ func (d *device) cliPrepare() (*CliParams, error) {
 
 	params := d.cliSession.params
 	if params.PromptRe == "" {
-		params.PromptRe = `[>#\$]\s+$`
+		params.PromptRe = `[>#\$]\s*$`
 	}
 	if params.Port == "" {
 		params.Port = "22"

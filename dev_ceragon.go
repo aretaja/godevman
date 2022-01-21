@@ -11,3 +11,28 @@ func (sd *deviceCeragon) SwVersion() (string, error) {
 	r, err := sd.getone(oid)
 	return r[oid].OctetString, err
 }
+
+// Execute cli commands
+func (sd *deviceCeragon) RunCmds(c []string) ([]string, error) {
+	p, err := sd.cliPrepare()
+	if err != nil {
+		return nil, err
+	}
+
+	err = sd.startCli(p)
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := sd.cliCmds(c)
+	if err != nil {
+		return out, err
+	}
+
+	err = sd.closeCli()
+	if err != nil {
+		return out, err
+	}
+
+	return out, nil
+}
