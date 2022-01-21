@@ -190,6 +190,40 @@ func (sd *deviceMikrotik) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 	return out, nil
 }
 
+// Set via CLI
+// Set Ethernet Interface Alias
+// set - map of ifIndexes and related ifAliases
+func (sd *deviceMikrotik) SetIfAlias(set map[string]string) error {
+	idxs := make([]string, 0, len(set))
+	for k := range set {
+		idxs = append(idxs, k)
+	}
+
+	r, err := sd.IfInfo([]string{"Descr", "Alias"}, idxs...)
+	if err != nil {
+		return fmt.Errorf("ifinfo error: %v", err)
+	}
+
+	cmds := []string{"/interface ethernet"}
+
+	for k, v := range set {
+		if i, ok := r[k]; ok {
+			if i.Alias.IsSet && i.Alias.Value != v && i.Descr.IsSet {
+				cmd := "set [ find name=" + i.Descr.Value + "] comment=\"" + v + "\""
+				cmds = append(cmds, cmd)
+			}
+		}
+	}
+	cmds = append(cmds, "/quit")
+
+	_, err = sd.RunCmds(cmds)
+	if err != nil {
+		return fmt.Errorf("cli command error: %v", err)
+	}
+
+	return nil
+}
+
 // Execute cli commands
 func (sd *deviceMikrotik) RunCmds(c []string) ([]string, error) {
 	p, err := sd.cliPrepare()
