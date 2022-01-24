@@ -36,6 +36,31 @@ func (sd *deviceMikrotik) cliPrepare() (*CliParams, error) {
 	return params, nil
 }
 
+// Execute cli commands
+func (sd *deviceMikrotik) RunCmds(c []string) ([]string, error) {
+	p, err := sd.cliPrepare()
+	if err != nil {
+		return nil, err
+	}
+
+	err = sd.startCli(p)
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := sd.cliCmds(c)
+	if err != nil {
+		return out, err
+	}
+
+	err = sd.closeCli()
+	if err != nil {
+		return out, err
+	}
+
+	return out, nil
+}
+
 // Get info from CLI
 // Returns vlan id-s and names
 func (sd *deviceMikrotik) D1qVlans() (map[string]string, error) {
@@ -219,31 +244,6 @@ func (sd *deviceMikrotik) SetIfAlias(set map[string]string) error {
 	}
 
 	return nil
-}
-
-// Execute cli commands
-func (sd *deviceMikrotik) RunCmds(c []string) ([]string, error) {
-	p, err := sd.cliPrepare()
-	if err != nil {
-		return nil, err
-	}
-
-	err = sd.startCli(p)
-	if err != nil {
-		return nil, err
-	}
-
-	out, err := sd.cliCmds(c)
-	if err != nil {
-		return out, err
-	}
-
-	err = sd.closeCli()
-	if err != nil {
-		return out, err
-	}
-
-	return out, nil
 }
 
 // Get info from CLI
