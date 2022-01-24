@@ -29,3 +29,48 @@ func (sd *deviceCisco) SwVersion() (string, error) {
 
 	return out, nil
 }
+
+// Prepare CLI session parameters
+func (sd *deviceCisco) cliPrepare() (*CliParams, error) {
+	defParams, err := sd.snmpCommon.cliPrepare()
+	if err != nil {
+		return nil, err
+	}
+
+	params := defParams
+
+	// make device specific changes to default parameters
+	if params.PreCmds == nil {
+		params.PreCmds = []string{
+			"terminal length 0",
+			"terminal width 132",
+		}
+	}
+
+	return params, nil
+}
+
+// Execute cli commands
+func (sd *deviceCisco) RunCmds(c []string) ([]string, error) {
+	p, err := sd.cliPrepare()
+	if err != nil {
+		return nil, err
+	}
+
+	err = sd.startCli(p)
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := sd.cliCmds(c)
+	if err != nil {
+		return out, err
+	}
+
+	err = sd.closeCli()
+	if err != nil {
+		return out, err
+	}
+
+	return out, nil
+}
