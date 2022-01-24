@@ -152,7 +152,7 @@ func (d *device) startCli(p *CliParams) error {
 		return fmt.Errorf("prompt(%v) match failed: %v out: %v", re, err, out)
 	}
 
-	// Run Imitial commands if requested
+	// Run Initial commands if requested
 	for _, cmd := range p.PreCmds {
 		err := e.Send(cmd + "\r")
 		if err != nil {
