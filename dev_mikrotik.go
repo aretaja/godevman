@@ -32,9 +32,6 @@ func (sd *deviceMikrotik) cliPrepare() (*CliParams, error) {
 	if params.PromptRe == "" {
 		params.PromptRe = `\] (\/.+)?>\s+$`
 	}
-	if params.Timeout == 0 {
-		params.Timeout = 5
-	}
 
 	return params, nil
 }
