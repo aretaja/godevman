@@ -27,7 +27,7 @@ func (d *device) cliPrepare() (*CliParams, error) {
 		}
 	}
 	if params.Timeout == 0 {
-		params.Timeout = 30
+		params.Timeout = 10
 	}
 
 	return params, nil
@@ -62,12 +62,27 @@ func (d *device) startCli(p *CliParams) error {
 		verbose = true
 	}
 
+	// Allow weaker key exchange algorithms
+	var config ssh.Config
+	config.SetDefaults()
+	kexOrder := config.KeyExchanges
+	kexOrder = append(kexOrder, "diffie-hellman-group1-sha1", "diffie-hellman-group-exchange-sha1", "diffie-hellman-group-exchange-sha256")
+	config.KeyExchanges = kexOrder
+
+	ciOrder := config.Ciphers
+	ciOrder = append(ciOrder, "aes256-cbc", "aes192-cbc", "aes128-cbc", "3des-cbc")
+	config.Ciphers = ciOrder
+
+	cconf := &ssh.ClientConfig{
+		Config:          config,
+		User:            user,
+		Auth:            []ssh.AuthMethod{ssh.Password(pass)},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	// Create expecter
 	sshExpecter := func() (*expect.GExpect, error) {
-		sshClt, err := ssh.Dial("tcp", addr, &ssh.ClientConfig{
-			User:            user,
-			Auth:            []ssh.AuthMethod{ssh.Password(pass)},
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		})
+		sshClt, err := ssh.Dial("tcp", addr, cconf)
 		if err != nil {
 			return nil, fmt.Errorf("ssh connection to %s failed: %v", addr, err)
 		}
@@ -135,6 +150,20 @@ func (d *device) startCli(p *CliParams) error {
 	out, _, err := e.Expect(re, -1)
 	if err != nil {
 		return fmt.Errorf("prompt(%v) match failed: %v out: %v", re, err, out)
+	}
+
+	// Run Imitial commands if requested
+	for _, cmd := range p.PreCmds {
+		err := e.Send(cmd + "\r")
+		if err != nil {
+			return fmt.Errorf("send(%q) failed: %v", cmd, err)
+		}
+
+		out, _, err := e.Expect(re, -1)
+		out = strings.TrimPrefix(out, cmd+"\r")
+		if err != nil {
+			return fmt.Errorf("expect(%v) failed: %v out: %v", re, err, out)
+		}
 	}
 
 	// Store cli client and parameters
