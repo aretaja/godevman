@@ -20,6 +20,8 @@ import (
 // Version of release
 const Version = "0.0.1"
 
+const time_iso8601_sec = "2006-01-02T15:04:05"
+
 // SNMP credentials for snmp session
 type SnmpCred struct {
 	// [username|community]
@@ -44,6 +46,10 @@ type CliParams struct {
 	// Default depends on device type
 	// Keep it as is if you are not sure
 	PromptRe string
+	// Cli errors re pattern
+	// Default depends on device type
+	// Keep it as is if you are not sure
+	ErrRe string
 	// Default "22" for ssh and "23" for telnet
 	Port string
 	// CLI session credentials
@@ -60,6 +66,18 @@ type CliParams struct {
 	Timeout int
 }
 
+// Info needed for Device backup
+type BackupParams struct {
+	// ip of backup target system
+	TargetIp string
+	// device identifier. Default is device ip
+	DevIdent string
+	// base path for backups (if device type needs it)
+	BasePath string
+	// Credentials
+	Cred []string
+}
+
 // Parameters for new Device object initialization
 type Dparams struct {
 	// ip of device
@@ -67,10 +85,14 @@ type Dparams struct {
 	// sysObjectId of Device
 	// Will be not discovered If present
 	SysObjectId string
-	SnmpCred    SnmpCred
+	// Timezone for time related actions
+	// Default is Europe/Tallinn
+	TimeZone string
 	// Websession credentials
-	WebCred   []string
-	CliParams CliParams
+	WebCred      []string
+	BackupParams BackupParams
+	SnmpCred     SnmpCred
+	CliParams    CliParams
 }
 
 // Websession
@@ -99,12 +121,16 @@ type device struct {
 	cliSession *cliSess
 	// Cache object
 	cache *cache.Cache
+	// Backup parameters
+	backupParams *BackupParams
 	// ip of device
 	ip string
 	// sysname of device
 	sysName string
 	// sysObjectId of device
 	sysObjectId string
+	// timezone related actions will use this.
+	timeZone string
 	// Debug level
 	debug int
 	// Enable use of cache
@@ -140,6 +166,20 @@ func NewDevice(p *Dparams) (*device, error) {
 	d.cliSession = new(cliSess)
 	if p.CliParams.Cred != nil {
 		d.cliSession.params = &p.CliParams
+	}
+
+	// Setup Backup info parameters
+	d.backupParams = &p.BackupParams
+	if p.BackupParams.DevIdent == "" {
+		d.backupParams.DevIdent = d.ip
+	}
+
+	d.timeZone = "Europe/Tallinn"
+	if p.TimeZone != "" {
+		_, err := time.LoadLocation(p.TimeZone)
+		if err == nil {
+			d.timeZone = p.TimeZone
+		}
 	}
 
 	// validate sysObjectId if defined

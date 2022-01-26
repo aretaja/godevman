@@ -717,6 +717,9 @@ func (sd *deviceEricssonMlPt) cliPrepare() (*CliParams, error) {
 	if params.PromptRe == "" {
 		params.PromptRe = `[\)\]]#\s+$`
 	}
+	if params.ErrRe == "" {
+		params.ErrRe = `(?im)(error|unknown|invalid|failed|timed out|no attribute)`
+	}
 
 	return params, nil
 }
@@ -909,4 +912,55 @@ func (sd *deviceEricssonMlPt) RunCmds(c []string) ([]string, error) {
 	}
 
 	return out, nil
+}
+
+// Execute cli commands
+func (sd *deviceEricssonMlPt) DoBackup() error {
+	if sd.backupParams == nil {
+		return fmt.Errorf("device backup parameters are not defined")
+	}
+
+	// Get backup parameters
+	host := sd.backupParams.TargetIp
+	if host == "" {
+		return fmt.Errorf("target ip is not defined")
+	}
+	user := ""
+	if len(sd.backupParams.Cred) > 0 {
+		user = sd.backupParams.Cred[0]
+	}
+	pass := ""
+	if len(sd.backupParams.Cred) > 1 {
+		pass = sd.backupParams.Cred[1]
+	}
+
+	t := time.Now()
+	loc, _ := time.LoadLocation(sd.timeZone)
+	t = t.In(loc)
+
+	targetFile := sd.backupParams.BasePath + "/" + sd.backupParams.DevIdent + "_" + t.Format(time_iso8601_sec) + ".zip"
+
+	cmds := []string{
+		"config common cdb backup filename " + targetFile + " ip " + host + " mode sftp password " + pass + " port 22 user " + user + ";_",
+		"quit",
+	}
+
+	res, err := sd.RunCmds(cmds)
+	if err != nil {
+		return fmt.Errorf("cli error: %v, output: %s", err, res)
+	}
+
+	for i := 0; i < 10; i++ {
+		time.Sleep(3 * time.Second)
+		b, err := sd.LastBackup()
+		if err != nil {
+			return fmt.Errorf("web api error: %v", err)
+		}
+
+		if t.Unix() < int64(b.Timestamp) && b.Progress == 100 && b.Success {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("no confirm for backup success from web api")
 }

@@ -32,6 +32,9 @@ func (sd *deviceMikrotik) cliPrepare() (*CliParams, error) {
 	if params.PromptRe == "" {
 		params.PromptRe = `\] (\/.+)?>\s+$`
 	}
+	if params.ErrRe == "" {
+		params.ErrRe = `(?im)(failure|error|unknown|unrecognized|invalid|not recognized|examples:|bad command)`
+	}
 
 	return params, nil
 }

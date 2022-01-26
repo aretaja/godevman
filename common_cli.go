@@ -20,6 +20,9 @@ func (d *device) cliPrepare() (*CliParams, error) {
 	if params.PromptRe == "" {
 		params.PromptRe = `[>#\$]\s*$`
 	}
+	if params.ErrRe == "" {
+		params.ErrRe = `(?im)(error|unknown|unrecognized|invalid)`
+	}
 	if params.Port == "" {
 		params.Port = "22"
 		if params.Telnet {

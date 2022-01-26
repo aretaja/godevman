@@ -87,6 +87,12 @@ type DevBackupReader interface {
 	LastBackup() (*backupInfo, error)
 }
 
+// Backup initiator
+type DevBackupper interface {
+	// Backup device config
+	DoBackup() error
+}
+
 // Get environment sensors info
 type DevSensorsReader interface {
 	Sensors([]string) (map[string]map[string]map[string]sensorVal, error)
