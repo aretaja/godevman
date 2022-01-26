@@ -1,5 +1,9 @@
 package godevman
 
+import (
+	"fmt"
+)
+
 // Adds Juniper specific SNMP functionality to snmpCommon type
 type deviceJuniper struct {
 	snmpCommon
@@ -22,6 +26,7 @@ func (sd *deviceJuniper) cliPrepare() (*CliParams, error) {
 	params := defParams
 
 	// make device specific changes to default parameters
+	params.Timeout = 30
 	if params.PromptRe == "" {
 		params.PromptRe = `(>|#|\%) ?$`
 	}
@@ -62,4 +67,39 @@ func (sd *deviceJuniper) RunCmds(c []string) ([]string, error) {
 	}
 
 	return out, nil
+}
+
+// Set via CLI
+// Set Interface Alias
+// set - map of ifIndexes and related ifAliases
+func (sd *deviceJuniper) SetIfAlias(set map[string]string) error {
+	idxs := make([]string, 0, len(set))
+	for k := range set {
+		idxs = append(idxs, k)
+	}
+
+	r, err := sd.IfInfo([]string{"Descr", "Alias"}, idxs...)
+	if err != nil {
+		return fmt.Errorf("ifinfo error: %v", err)
+	}
+
+	cmds := []string{"configure"}
+
+	for k, v := range set {
+		if i, ok := r[k]; ok {
+			if i.Alias.IsSet && i.Alias.Value != v && i.Descr.IsSet {
+				cmd := "set interfaces " + i.Descr.Value + " description " + v
+				cmds = append(cmds, cmd)
+			}
+		}
+	}
+
+	cmds = append(cmds, "commit and-quit", "exit")
+
+	_, err = sd.RunCmds(cmds)
+	if err != nil {
+		return fmt.Errorf("cli command error: %v", err)
+	}
+
+	return nil
 }
