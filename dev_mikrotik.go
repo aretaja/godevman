@@ -35,12 +35,15 @@ func (sd *deviceMikrotik) cliPrepare() (*CliParams, error) {
 	if params.ErrRe == "" {
 		params.ErrRe = `(?im)(failure|error|unknown|unrecognized|invalid|not recognized|examples:|bad command)`
 	}
+	if params.DisconnectCmds == nil {
+		params.DisconnectCmds = []string{"/quit"}
+	}
 
 	return params, nil
 }
 
 // Execute cli commands
-func (sd *deviceMikrotik) RunCmds(c []string) ([]string, error) {
+func (sd *deviceMikrotik) RunCmds(c []string, e bool) ([]string, error) {
 	p, err := sd.cliPrepare()
 	if err != nil {
 		return nil, err
@@ -51,7 +54,7 @@ func (sd *deviceMikrotik) RunCmds(c []string) ([]string, error) {
 		return nil, err
 	}
 
-	out, err := sd.cliCmds(c)
+	out, err := sd.cliCmds(c, e)
 	if err != nil {
 		return out, err
 	}
@@ -241,7 +244,7 @@ func (sd *deviceMikrotik) SetIfAlias(set map[string]string) error {
 	}
 	cmds = append(cmds, "/quit")
 
-	_, err = sd.RunCmds(cmds)
+	_, err = sd.RunCmds(cmds, true)
 	if err != nil {
 		return fmt.Errorf("cli command error: %v", err)
 	}
@@ -262,7 +265,7 @@ func (sd *deviceMikrotik) vlanInfo() (map[string][]map[string]string, error) {
 		"/quit",
 	}
 
-	r, err := sd.RunCmds(cmds)
+	r, err := sd.RunCmds(cmds, false)
 	if err != nil {
 		return vlans, fmt.Errorf("cli command error: %v", err)
 	}

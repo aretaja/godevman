@@ -720,6 +720,9 @@ func (sd *deviceEricssonMlPt) cliPrepare() (*CliParams, error) {
 	if params.ErrRe == "" {
 		params.ErrRe = `(?im)(error|unknown|invalid|failed|timed out|no attribute)`
 	}
+	if params.DisconnectCmds == nil {
+		params.DisconnectCmds = []string{"end;_", "exit"}
+	}
 
 	return params, nil
 }
@@ -890,7 +893,7 @@ func (d *deviceEricssonMlPt) startCli(p *CliParams) error {
 }
 
 // Execute cli commands
-func (sd *deviceEricssonMlPt) RunCmds(c []string) ([]string, error) {
+func (sd *deviceEricssonMlPt) RunCmds(c []string, e bool) ([]string, error) {
 	p, err := sd.cliPrepare()
 	if err != nil {
 		return nil, err
@@ -901,8 +904,12 @@ func (sd *deviceEricssonMlPt) RunCmds(c []string) ([]string, error) {
 		return nil, err
 	}
 
-	out, err := sd.cliCmds(c)
+	out, err := sd.cliCmds(c, e)
 	if err != nil {
+		err2 := sd.closeCli()
+		if err2 != nil {
+			err = fmt.Errorf("%v; session close error: %v", err, err2)
+		}
 		return out, err
 	}
 
@@ -945,7 +952,7 @@ func (sd *deviceEricssonMlPt) DoBackup() error {
 		"quit",
 	}
 
-	res, err := sd.RunCmds(cmds)
+	res, err := sd.RunCmds(cmds, true)
 	if err != nil {
 		return fmt.Errorf("cli error: %v, output: %s", err, res)
 	}

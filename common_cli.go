@@ -23,6 +23,9 @@ func (d *device) cliPrepare() (*CliParams, error) {
 	if params.ErrRe == "" {
 		params.ErrRe = `(?im)(error|unknown|unrecognized|invalid)`
 	}
+	if params.DisconnectCmds == nil {
+		params.DisconnectCmds = []string{"exit"}
+	}
 	if params.Port == "" {
 		params.Port = "22"
 		if params.Telnet {
@@ -176,7 +179,8 @@ func (d *device) startCli(p *CliParams) error {
 }
 
 // Execute cli commands. Returns all sent, received data as string slice
-func (d *device) cliCmds(c []string) ([]string, error) {
+// c - cli commands, e - check for command errors
+func (d *device) cliCmds(c []string, f bool) ([]string, error) {
 	var output []string
 	e := d.cliSession.client
 	if e == nil {
@@ -184,6 +188,7 @@ func (d *device) cliCmds(c []string) ([]string, error) {
 	}
 
 	pRe := regexp.MustCompile(d.cliSession.params.PromptRe)
+	eRe := regexp.MustCompile(d.cliSession.params.ErrRe)
 
 	cnt := len(c)
 	for _, cmd := range c {
@@ -201,6 +206,14 @@ func (d *device) cliCmds(c []string) ([]string, error) {
 		out, _, err := e.Expect(pRe, -1)
 		out = strings.TrimPrefix(out, cmd+"\r")
 		output = append(output, out)
+
+		// Check for errors if requested
+		if f {
+			if eRe.Match([]byte(out)) {
+				return output, fmt.Errorf("cli command exec error: %s", out)
+			}
+		}
+
 		if err != nil {
 			return output, fmt.Errorf("expect(%v) failed: %v out: %v", pRe, err, out)
 		}
@@ -216,6 +229,15 @@ func (d *device) closeCli() error {
 		return nil
 	}
 
+	if d.cliSession.params.DisconnectCmds != nil {
+		for _, cmd := range d.cliSession.params.DisconnectCmds {
+			err := e.Send(cmd + "\r")
+			if err != nil {
+				break
+			}
+			time.Sleep(time.Second)
+		}
+	}
 	d.cliSession.client = nil
 	return nil
 }

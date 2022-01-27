@@ -40,6 +40,9 @@ func (sd *deviceCisco) cliPrepare() (*CliParams, error) {
 	params := defParams
 
 	// make device specific changes to default parameters
+	if params.DisconnectCmds == nil {
+		params.DisconnectCmds = []string{"end", "exit"}
+	}
 	if params.PreCmds == nil {
 		params.PreCmds = []string{
 			"terminal length 0",
@@ -51,7 +54,7 @@ func (sd *deviceCisco) cliPrepare() (*CliParams, error) {
 }
 
 // Execute cli commands
-func (sd *deviceCisco) RunCmds(c []string) ([]string, error) {
+func (sd *deviceCisco) RunCmds(c []string, e bool) ([]string, error) {
 	p, err := sd.cliPrepare()
 	if err != nil {
 		return nil, err
@@ -62,8 +65,12 @@ func (sd *deviceCisco) RunCmds(c []string) ([]string, error) {
 		return nil, err
 	}
 
-	out, err := sd.cliCmds(c)
+	out, err := sd.cliCmds(c, e)
 	if err != nil {
+		err2 := sd.closeCli()
+		if err2 != nil {
+			err = fmt.Errorf("%v; session close error: %v", err, err2)
+		}
 		return out, err
 	}
 

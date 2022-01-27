@@ -58,6 +58,10 @@ type CliParams struct {
 	// Default depends on device type
 	// Keep it as is if you are not sure
 	PreCmds []string
+	// Commands which will be executed to gracefully close session
+	// Default depends on device type
+	// Keep it as is if you are not sure
+	DisconnectCmds []string
 	// Use telnet instead of ssh. Default false
 	Telnet bool
 	// Session timeout (sec)

@@ -45,7 +45,7 @@ func (sd *deviceJuniper) cliPrepare() (*CliParams, error) {
 }
 
 // Execute cli commands
-func (sd *deviceJuniper) RunCmds(c []string) ([]string, error) {
+func (sd *deviceJuniper) RunCmds(c []string, e bool) ([]string, error) {
 	p, err := sd.cliPrepare()
 	if err != nil {
 		return nil, err
@@ -56,8 +56,12 @@ func (sd *deviceJuniper) RunCmds(c []string) ([]string, error) {
 		return nil, err
 	}
 
-	out, err := sd.cliCmds(c)
+	out, err := sd.cliCmds(c, e)
 	if err != nil {
+		err2 := sd.closeCli()
+		if err2 != nil {
+			err = fmt.Errorf("%v; session close error: %v", err, err2)
+		}
 		return out, err
 	}
 
@@ -96,7 +100,7 @@ func (sd *deviceJuniper) SetIfAlias(set map[string]string) error {
 
 	cmds = append(cmds, "commit and-quit", "exit")
 
-	_, err = sd.RunCmds(cmds)
+	_, err = sd.RunCmds(cmds, true)
 	if err != nil {
 		return fmt.Errorf("cli command error: %v", err)
 	}

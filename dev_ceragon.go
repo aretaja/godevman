@@ -1,5 +1,7 @@
 package godevman
 
+import "fmt"
+
 // Adds Ceragon specific SNMP functionality to snmpCommon type
 type deviceCeragon struct {
 	snmpCommon
@@ -13,7 +15,7 @@ func (sd *deviceCeragon) SwVersion() (string, error) {
 }
 
 // Execute cli commands
-func (sd *deviceCeragon) RunCmds(c []string) ([]string, error) {
+func (sd *deviceCeragon) RunCmds(c []string, e bool) ([]string, error) {
 	p, err := sd.cliPrepare()
 	if err != nil {
 		return nil, err
@@ -24,8 +26,12 @@ func (sd *deviceCeragon) RunCmds(c []string) ([]string, error) {
 		return nil, err
 	}
 
-	out, err := sd.cliCmds(c)
+	out, err := sd.cliCmds(c, e)
 	if err != nil {
+		err2 := sd.closeCli()
+		if err2 != nil {
+			err = fmt.Errorf("%v; session close error: %v", err, err2)
+		}
 		return out, err
 	}
 
