@@ -111,7 +111,7 @@ type DevEnergyMeterReader interface {
 // CLI releated functionality
 type DevCliWriter interface {
 	// Execute cli commands
-	RunCmds([]string) ([]string, error)
+	RunCmds([]string, bool) ([]string, error)
 }
 
 // Test interface
