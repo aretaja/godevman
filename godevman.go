@@ -52,6 +52,11 @@ type CliParams struct {
 	ErrRe string
 	// Default "22" for ssh and "23" for telnet
 	Port string
+	// Full path to unencrypted PEM-encoded private key file
+	// If declared PublicKeys method for remote authentication will be used
+	KeyPath string
+	// Private key passphrase if any
+	KeySecret string
 	// CLI session credentials
 	Cred []string
 	// Commands which will be executed first on session start

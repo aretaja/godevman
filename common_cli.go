@@ -2,6 +2,8 @@ package godevman
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -62,8 +64,7 @@ func (d *device) startCli(p *CliParams) error {
 
 	timeOut := time.Duration(p.Timeout) * time.Second
 
-	// verbose := false
-	verbose := false
+	var verbose bool
 	if d.debug > 0 {
 		verbose = true
 	}
@@ -79,11 +80,35 @@ func (d *device) startCli(p *CliParams) error {
 	ciOrder = append(ciOrder, "aes256-cbc", "aes192-cbc", "aes128-cbc", "3des-cbc")
 	config.Ciphers = ciOrder
 
+	auth := ssh.Password(pass)
+	if p.KeyPath != "" {
+		key, err := ioutil.ReadFile(p.KeyPath)
+		if err != nil {
+			log.Printf("warn: unable to read private key: %v", err)
+		} else {
+			// Create the Signer for this private key.
+			var signer ssh.Signer
+			if p.KeySecret != "" {
+				signer, err = ssh.ParsePrivateKeyWithPassphrase(key, []byte(p.KeySecret))
+				if err != nil {
+					log.Printf("warn: unable to parse password protected private key: %v", err)
+				}
+			} else {
+				signer, err = ssh.ParsePrivateKey(key)
+				if err != nil {
+					log.Printf("warn: unable to parse private key: %v", err)
+				}
+			}
+			auth = ssh.PublicKeys(signer)
+		}
+	}
+
 	cconf := &ssh.ClientConfig{
 		Config:          config,
 		User:            user,
-		Auth:            []ssh.AuthMethod{ssh.Password(pass)},
+		Auth:            []ssh.AuthMethod{auth},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         timeOut,
 	}
 
 	// Create expecter
@@ -114,7 +139,7 @@ func (d *device) startCli(p *CliParams) error {
 			return nil, fmt.Errorf("telnet login prompt match failed: %v out: %v", err, out)
 		}
 
-		err = e.Send(user + "\r")
+		err = e.Send(user + "\r\n")
 		if err != nil {
 			return nil, fmt.Errorf("telnet send username failed: %v", err)
 		}
@@ -126,7 +151,7 @@ func (d *device) startCli(p *CliParams) error {
 			return nil, fmt.Errorf("telnet password prompt match failed: %v out: %v", err, out)
 		}
 
-		err = e.Send(pass + "\r")
+		err = e.Send(pass + "\r\n")
 		if err != nil {
 			return nil, fmt.Errorf("telnet send password failed: %v", err)
 		}
@@ -160,13 +185,13 @@ func (d *device) startCli(p *CliParams) error {
 
 	// Run Initial commands if requested
 	for _, cmd := range p.PreCmds {
-		err := e.Send(cmd + "\r")
+		err := e.Send(cmd + "\r\n")
 		if err != nil {
 			return fmt.Errorf("send(%q) failed: %v", cmd, err)
 		}
 
 		out, _, err := e.Expect(re, -1)
-		out = strings.TrimPrefix(out, cmd+"\r")
+		out = strings.TrimPrefix(out, cmd+"\r\n")
 		if err != nil {
 			return fmt.Errorf("expect(%v) failed: %v out: %v", re, err, out)
 		}
@@ -194,7 +219,7 @@ func (d *device) cliCmds(c []string, f bool) ([]string, error) {
 	for _, cmd := range c {
 		cnt--
 		output = append(output, cmd)
-		err := e.Send(cmd + "\r")
+		err := e.Send(cmd + "\r\n")
 		if err != nil {
 			return output, fmt.Errorf("send(%q) failed: %v", cmd, err)
 		}
@@ -204,7 +229,7 @@ func (d *device) cliCmds(c []string, f bool) ([]string, error) {
 			pRe = regexp.MustCompile(`(?m).*$`)
 		}
 		out, _, err := e.Expect(pRe, -1)
-		out = strings.TrimPrefix(out, cmd+"\r")
+		out = strings.TrimPrefix(out, cmd+"\r\n")
 		output = append(output, out)
 
 		// Check for errors if requested
@@ -231,7 +256,7 @@ func (d *device) closeCli() error {
 
 	if d.cliSession.params.DisconnectCmds != nil {
 		for _, cmd := range d.cliSession.params.DisconnectCmds {
-			err := e.Send(cmd + "\r")
+			err := e.Send(cmd + "\r\n")
 			if err != nil {
 				break
 			}

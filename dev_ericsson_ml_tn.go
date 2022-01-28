@@ -109,6 +109,7 @@ func (d *deviceEricssonMlTn) startCli(p *CliParams) error {
 		User:            "cli",
 		Auth:            []ssh.AuthMethod{ssh.Password("")},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         timeOut,
 	}
 
 	// Regexes for credentials
