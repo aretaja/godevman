@@ -114,6 +114,11 @@ type DevCliWriter interface {
 	RunCmds([]string, bool) ([]string, error)
 }
 
+// Get running config
+type DevConfReader interface {
+	RuningCfg() (string, error)
+}
+
 // Test interface
 // type DevTest interface {
 // 	TestCmd([]string) ([]string, error)

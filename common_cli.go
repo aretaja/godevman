@@ -132,7 +132,7 @@ func (d *device) startCli(p *CliParams) error {
 		}
 
 		// Check for valid login prompt
-		uRe := regexp.MustCompile(`(?i)(ogin:|name:)\s*$`)
+		uRe := regexp.MustCompile(`(?i)(ogin:|name:|as:)\s*$`)
 		out, _, err := e.Expect(uRe, -1)
 
 		if err != nil {
