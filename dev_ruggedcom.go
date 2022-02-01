@@ -38,7 +38,10 @@ func (sd *deviceRuggedcom) cliPrepare() (*CliParams, error) {
 	if sd.cliSession.params.ErrRe == "" {
 		params.ErrRe = `(?im)(error|unknown|unrecognized|invalid|not recognized|Examples:|timed out)`
 	}
-	params.DisconnectCmds = []string{"logout"}
+	if sd.cliSession.params.DisconnectCmds == nil {
+		params.DisconnectCmds = []string{"logout"}
+	}
+
 	return params, nil
 }
 

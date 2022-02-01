@@ -27,13 +27,13 @@ func (sd *deviceJuniper) cliPrepare() (*CliParams, error) {
 
 	// make device specific changes to default parameters
 	params.Timeout = 30
-	if params.PromptRe == "" {
+	if sd.cliSession.params.PromptRe == "" {
 		params.PromptRe = `(>|#|\%) ?$`
 	}
-	if params.ErrRe == "" {
+	if sd.cliSession.params.ErrRe == "" {
 		params.ErrRe = `(?im)(error|unknown|invalid|failed|timed out)`
 	}
-	if params.PreCmds == nil {
+	if sd.cliSession.params.PreCmds == nil {
 		params.PreCmds = []string{
 			"",
 			"set cli complete-on-space off",

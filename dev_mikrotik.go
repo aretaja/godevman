@@ -29,13 +29,13 @@ func (sd *deviceMikrotik) cliPrepare() (*CliParams, error) {
 
 	// make device specific changes to default parameters
 	params.Cred[0] = params.Cred[0] + "+ct600w"
-	if params.PromptRe == "" {
+	if sd.cliSession.params.PromptRe == "" {
 		params.PromptRe = `\] (\/.+)?>\s+$`
 	}
-	if params.ErrRe == "" {
+	if sd.cliSession.params.ErrRe == "" {
 		params.ErrRe = `(?im)(failure|error|unknown|unrecognized|invalid|not recognized|examples:|bad command)`
 	}
-	if params.DisconnectCmds == nil {
+	if sd.cliSession.params.DisconnectCmds == nil {
 		params.DisconnectCmds = []string{"/quit"}
 	}
 

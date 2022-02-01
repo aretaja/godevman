@@ -40,10 +40,10 @@ func (sd *deviceCisco) cliPrepare() (*CliParams, error) {
 	params := defParams
 
 	// make device specific changes to default parameters
-	if params.DisconnectCmds == nil {
+	if sd.cliSession.params.DisconnectCmds == nil {
 		params.DisconnectCmds = []string{"end", "exit"}
 	}
-	if params.PreCmds == nil {
+	if sd.cliSession.params.PreCmds == nil {
 		params.PreCmds = []string{
 			"terminal length 0",
 			"terminal width 132",

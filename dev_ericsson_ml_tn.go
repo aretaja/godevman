@@ -51,13 +51,13 @@ func (sd *deviceEricssonMlTn) cliPrepare() (*CliParams, error) {
 	params := defParams
 
 	// make device specific changes to default parameters
-	if params.PromptRe == "" {
+	if sd.cliSession.params.PromptRe == "" {
 		params.PromptRe = `(>|#)\s?$`
 	}
-	if params.ErrRe == "" {
+	if sd.cliSession.params.ErrRe == "" {
 		params.ErrRe = `(?im)(error|unknown|invalid|failed|timed out)`
 	}
-	if params.DisconnectCmds == nil {
+	if sd.cliSession.params.DisconnectCmds == nil {
 		params.DisconnectCmds = []string{"end", "exit"}
 	}
 
