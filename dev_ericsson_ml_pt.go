@@ -922,7 +922,7 @@ func (sd *deviceEricssonMlPt) RunCmds(c []string, e bool) ([]string, error) {
 	return out, nil
 }
 
-// Execute cli commands
+// Initiate device backup
 func (sd *deviceEricssonMlPt) DoBackup() error {
 	if sd.backupParams == nil {
 		return fmt.Errorf("device backup parameters are not defined")
