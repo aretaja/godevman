@@ -77,11 +77,12 @@ type CliParams struct {
 
 // Info needed for Device backup
 type BackupParams struct {
-	// ip of backup target system
+	// IP of backup target system
 	TargetIp string
-	// device identifier. Default is device ip
+	// Device identifier. Default is device ip
+	// Will be used as first part of backup file name
 	DevIdent string
-	// base path for backups (if device type needs it)
+	// Base path for backups (if device type needs it)
 	BasePath string
 	// Credentials
 	Cred []string
