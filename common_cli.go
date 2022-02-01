@@ -18,7 +18,7 @@ func (d *device) cliPrepare() (*CliParams, error) {
 		return nil, fmt.Errorf("cli parameters missing")
 	}
 
-	params := d.cliSession.params
+	params := *d.cliSession.params
 	if params.PromptRe == "" {
 		params.PromptRe = `[>#\$]\s*$`
 	}
@@ -38,7 +38,7 @@ func (d *device) cliPrepare() (*CliParams, error) {
 		params.Timeout = 10
 	}
 
-	return params, nil
+	return &params, nil
 }
 
 // Create and store cli expect client and update d.cliSession.params
