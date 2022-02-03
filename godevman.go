@@ -331,13 +331,36 @@ func (d *device) Morph() interface{} {
 			md := deviceLinux{sd}
 			res = &md
 
-			r, err := sd.System([]string{"Descr"})
+			r, err := md.System([]string{"Descr"})
 			if err == nil {
-				if match, _ := regexp.MatchString(`(?i)martem`, r.Descr.Value); match {
-					md := deviceMartem{
-						snmpCommon{*d},
-					}
+				bOpts, _ := md.BuildOpts()
+				vType, vErr := sd.getone(".1.3.6.1.4.1.12578.3.2.1.1.1.0")
+
+				martemRe := regexp.MustCompile(`(?i)martem`)
+				violaRe := regexp.MustCompile(`(?i)viola`)
+				violaHttpRe := regexp.MustCompile(`(?i)Revision: 1.10 | ppc`)
+
+				// HACK - Try to guess device type. Works for me ;)
+				switch {
+				case martemRe.Match([]byte(r.Descr.Value)):
+					md := deviceMartem{sd}
 					res = &md
+				case violaRe.Match([]byte(r.Descr.Value)):
+					md := deviceViola{sd}
+					res = &md
+				case violaRe.Match([]byte(bOpts)):
+					md := deviceViola{sd}
+					res = &md
+				case vType != nil || vErr == nil:
+					md := deviceViola{sd}
+					res = &md
+				case violaHttpRe.Match([]byte(r.Descr.Value)):
+					violaWebRe := regexp.MustCompile(`(?ims)<body alink="#3a568d" link="#3a568d" vlink="#3a568d">`)
+					body, _ := sd.WebApiGet("")
+					if violaWebRe.Match(body) {
+						md := deviceViola{sd}
+						res = &md
+					}
 				}
 			}
 		case d.sysObjectId == ".1.3.6.1.4.1.14988.1":

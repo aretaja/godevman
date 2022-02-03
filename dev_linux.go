@@ -49,6 +49,13 @@ func (sd *deviceLinux) SwVersion() (string, error) {
 	return version, err
 }
 
+// Options passed to the configure script when this agent was built
+func (sd *deviceLinux) BuildOpts() (string, error) {
+	oid := ".1.3.6.1.4.1.2021.100.6.0"
+	r, err := sd.getone(oid)
+	return r[oid].OctetString, err
+}
+
 // Execute cli commands
 func (sd *deviceLinux) RunCmds(c []string, e bool) ([]string, error) {
 	p, err := sd.cliPrepare()
