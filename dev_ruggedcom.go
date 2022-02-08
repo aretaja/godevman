@@ -266,7 +266,11 @@ func (sd *deviceRuggedcom) cliCmds(c []string, f bool) ([]string, error) {
 }
 
 // Execute cli commands
-func (sd *deviceRuggedcom) RunCmds(c []string, e bool) ([]string, error) {
+func (sd *deviceRuggedcom) RunCmds(c []string, o *CliCmdOpts) ([]string, error) {
+	if o == nil {
+		o = new(CliCmdOpts)
+	}
+
 	p, err := sd.cliPrepare()
 	if err != nil {
 		return nil, err
@@ -277,7 +281,7 @@ func (sd *deviceRuggedcom) RunCmds(c []string, e bool) ([]string, error) {
 		return nil, err
 	}
 
-	out, err := sd.cliCmds(c, e)
+	out, err := sd.cliCmds(c, o.ChkErr)
 	if err != nil {
 		err2 := sd.closeCli()
 		if err2 != nil {
@@ -317,7 +321,7 @@ func (sd *deviceRuggedcom) DoBackup() error {
 		"logout",
 	}
 
-	res, err := sd.RunCmds(cmds, true)
+	res, err := sd.RunCmds(cmds, &CliCmdOpts{ChkErr: true})
 	if err != nil {
 		return fmt.Errorf("cli error: %v, output: %s", err, res)
 	}

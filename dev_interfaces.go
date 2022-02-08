@@ -69,6 +69,11 @@ type DevSwReader interface {
 	SwVersion() (string, error)
 }
 
+// Get Hardware info
+type DevHwReader interface {
+	HwInfo() (map[string]string, error)
+}
+
 // Functionality related to web connection authentication
 type DevWebSessManager interface {
 	WebAuth([]string) error
@@ -111,7 +116,7 @@ type DevEnergyMeterReader interface {
 // CLI releated functionality
 type DevCliWriter interface {
 	// Execute cli commands
-	RunCmds([]string, bool) ([]string, error)
+	RunCmds([]string, *CliCmdOpts) ([]string, error)
 }
 
 // Get running config

@@ -54,7 +54,11 @@ func (sd *deviceCisco) cliPrepare() (*CliParams, error) {
 }
 
 // Execute cli commands
-func (sd *deviceCisco) RunCmds(c []string, e bool) ([]string, error) {
+func (sd *deviceCisco) RunCmds(c []string, o *CliCmdOpts) ([]string, error) {
+	if o == nil {
+		o = new(CliCmdOpts)
+	}
+
 	p, err := sd.cliPrepare()
 	if err != nil {
 		return nil, err
@@ -65,7 +69,7 @@ func (sd *deviceCisco) RunCmds(c []string, e bool) ([]string, error) {
 		return nil, err
 	}
 
-	out, err := sd.cliCmds(c, e)
+	out, err := sd.cliCmds(c, o.ChkErr)
 	if err != nil {
 		err2 := sd.closeCli()
 		if err2 != nil {

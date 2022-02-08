@@ -40,7 +40,11 @@ func (sd *deviceMoxa) cliPrepare() (*CliParams, error) {
 }
 
 // Execute cli commands
-func (sd *deviceMoxa) RunCmds(c []string, e bool) ([]string, error) {
+func (sd *deviceMoxa) RunCmds(c []string, o *CliCmdOpts) ([]string, error) {
+	if o == nil {
+		o = new(CliCmdOpts)
+	}
+
 	p, err := sd.cliPrepare()
 	if err != nil {
 		return nil, err
@@ -51,7 +55,7 @@ func (sd *deviceMoxa) RunCmds(c []string, e bool) ([]string, error) {
 		return nil, err
 	}
 
-	out, err := sd.cliCmds(c, e)
+	out, err := sd.cliCmds(c, o.ChkErr)
 	if err != nil {
 		err2 := sd.closeCli()
 		if err2 != nil {
@@ -71,7 +75,7 @@ func (sd *deviceMoxa) RunCmds(c []string, e bool) ([]string, error) {
 // Get running config
 func (sd *deviceMoxa) RuningCfg() (string, error) {
 	cmds := []string{"sho run", "exit"}
-	res, err := sd.RunCmds(cmds, true)
+	res, err := sd.RunCmds(cmds, &CliCmdOpts{ChkErr: true})
 	if err != nil {
 		return "", fmt.Errorf("cli command error: %v", err)
 	}

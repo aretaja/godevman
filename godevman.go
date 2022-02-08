@@ -57,6 +57,10 @@ type CliParams struct {
 	KeyPath string
 	// Private key passphrase if any
 	KeySecret string
+	// Valid values are "\r\n" or "\n"
+	// Default depends on device type
+	// Keep it as is if you are not sure
+	LineEnd string
 	// CLI session credentials
 	Cred []string
 	// Commands which will be executed first on session start
@@ -73,6 +77,16 @@ type CliParams struct {
 	// Depends on device type
 	// Keep it as is if you are not sure
 	Timeout int
+}
+
+// CLI command exec options
+type CliCmdOpts struct {
+	// Parse errors from cli output after submitting commands
+	// Default false
+	ChkErr bool
+	// Run commands in privilrged mode (applicable on some device types)
+	// Default false
+	Priv bool
 }
 
 // Info needed for Device backup

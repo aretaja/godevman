@@ -25,6 +25,9 @@ func (d *device) cliPrepare() (*CliParams, error) {
 	if params.ErrRe == "" {
 		params.ErrRe = `(?im)(error|unknown|unrecognized|invalid)`
 	}
+	if params.LineEnd == "" {
+		params.LineEnd = "\r\n"
+	}
 	if params.DisconnectCmds == nil {
 		params.DisconnectCmds = []string{"exit"}
 	}
@@ -139,7 +142,7 @@ func (d *device) startCli(p *CliParams) error {
 			return nil, fmt.Errorf("telnet login prompt match failed: %v out: %v", err, out)
 		}
 
-		err = e.Send(user + "\r\n")
+		err = e.Send(user + p.LineEnd)
 		if err != nil {
 			return nil, fmt.Errorf("telnet send username failed: %v", err)
 		}
@@ -151,7 +154,7 @@ func (d *device) startCli(p *CliParams) error {
 			return nil, fmt.Errorf("telnet password prompt match failed: %v out: %v", err, out)
 		}
 
-		err = e.Send(pass + "\r\n")
+		err = e.Send(pass + p.LineEnd)
 		if err != nil {
 			return nil, fmt.Errorf("telnet send password failed: %v", err)
 		}
@@ -185,13 +188,13 @@ func (d *device) startCli(p *CliParams) error {
 
 	// Run Initial commands if requested
 	for _, cmd := range p.PreCmds {
-		err := e.Send(cmd + "\r\n")
+		err := e.Send(cmd + p.LineEnd)
 		if err != nil {
 			return fmt.Errorf("send(%q) failed: %v", cmd, err)
 		}
 
 		out, _, err := e.Expect(re, -1)
-		out = strings.TrimPrefix(out, cmd+"\r\n")
+		out = strings.TrimPrefix(out, cmd+p.LineEnd)
 		if err != nil {
 			return fmt.Errorf("expect(%v) failed: %v out: %v", re, err, out)
 		}
@@ -219,7 +222,7 @@ func (d *device) cliCmds(c []string, f bool) ([]string, error) {
 	for _, cmd := range c {
 		cnt--
 		output = append(output, cmd)
-		err := e.Send(cmd + "\r\n")
+		err := e.Send(cmd + d.cliSession.params.LineEnd)
 		if err != nil {
 			return output, fmt.Errorf("send(%q) failed: %v", cmd, err)
 		}
@@ -229,7 +232,7 @@ func (d *device) cliCmds(c []string, f bool) ([]string, error) {
 			pRe = regexp.MustCompile(`(?m).*$`)
 		}
 		out, _, err := e.Expect(pRe, -1)
-		out = strings.TrimPrefix(out, cmd+"\r\n")
+		out = strings.TrimPrefix(out, cmd+d.cliSession.params.LineEnd)
 		output = append(output, out)
 
 		// Check for errors if requested
@@ -256,7 +259,7 @@ func (d *device) closeCli() error {
 
 	if d.cliSession.params.DisconnectCmds != nil {
 		for _, cmd := range d.cliSession.params.DisconnectCmds {
-			err := e.Send(cmd + "\r\n")
+			err := e.Send(cmd + d.cliSession.params.LineEnd)
 			if err != nil {
 				break
 			}
