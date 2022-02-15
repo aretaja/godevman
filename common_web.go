@@ -43,7 +43,7 @@ func (d *device) webClient(headers map[string][]string) (*http.Client, error) {
 
 	// return client
 	client := &http.Client{
-		Timeout:   time.Second * 10,
+		Timeout:   time.Second * 15,
 		Transport: MyRoundTripper{r: tr, h: headers},
 		Jar:       jar,
 	}
