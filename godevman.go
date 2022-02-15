@@ -359,13 +359,13 @@ func (d *device) Morph() interface{} {
 				case martemRe.Match([]byte(r.Descr.Value)):
 					md := deviceMartem{sd}
 					res = &md
+				case vType != nil || vErr == nil:
+					md := deviceViola{sd}
+					res = &md
 				case violaRe.Match([]byte(r.Descr.Value)):
 					md := deviceViola{sd}
 					res = &md
 				case violaRe.Match([]byte(bOpts)):
-					md := deviceViola{sd}
-					res = &md
-				case vType != nil || vErr == nil:
 					md := deviceViola{sd}
 					res = &md
 				case violaHttpRe.Match([]byte(r.Descr.Value)):
