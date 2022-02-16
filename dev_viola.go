@@ -191,6 +191,9 @@ func (sd *deviceViola) HwInfo() (map[string]string, error) {
 	out := make(map[string]string)
 	reParts := regexp.MustCompile(`(?s).*Product name:\s*(.*?)(?:\r|\n).*?Hardware revision:\s*(.*?)(?:\r|\n).*?Device serial number:\s*(.*?)(?:\r|\n)`)
 	parts := reParts.FindStringSubmatch(string(body))
+	if len(parts) < 4 {
+		return nil, fmt.Errorf("info not found from device web")
+	}
 
 	out["prodname"] = parts[1]
 	out["hwtype"] = parts[2]
