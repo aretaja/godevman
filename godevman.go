@@ -428,6 +428,8 @@ func (d *device) Morph() interface{} {
 		switch {
 		case d.sysObjectId == "no-snmp-ecs":
 			res = &deviceEcsEmeter{*d}
+		case d.sysObjectId == "no-snmp-viola":
+			res = &deviceViolaNoSNMP{*d}
 		}
 	}
 
