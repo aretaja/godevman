@@ -124,6 +124,11 @@ type DevConfReader interface {
 	RuningCfg() (string, error)
 }
 
+// Mobile signal related functionality
+type DevMobReader interface {
+	MobSignal() (mobSignal, error)
+}
+
 // Test interface
 // type DevTest interface {
 // 	TestCmd([]string) ([]string, error)

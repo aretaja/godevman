@@ -351,6 +351,7 @@ func (d *device) Morph() interface{} {
 				vType, vErr := sd.getone(".1.3.6.1.4.1.12578.3.2.1.1.1.0")
 
 				martemRe := regexp.MustCompile(`(?i)martem`)
+				teltonikaRe := regexp.MustCompile(`(?i)teltonika`)
 				violaRe := regexp.MustCompile(`(?i)viola`)
 				violaHttpRe := regexp.MustCompile(`(?i)Revision: 1.10 | ppc`)
 
@@ -358,6 +359,9 @@ func (d *device) Morph() interface{} {
 				switch {
 				case martemRe.Match([]byte(r.Descr.Value)):
 					md := deviceMartem{sd}
+					res = &md
+				case teltonikaRe.Match([]byte(r.Descr.Value)):
+					md := deviceTeltonika{sd}
 					res = &md
 				case vType != nil || vErr == nil:
 					md := deviceViola{sd}
@@ -616,6 +620,11 @@ type onuInfo struct {
 	UpTime     valU64
 	Online     valBool
 	Enabled    valBool
+}
+
+// Mobile modem signal data
+type mobSignal struct {
+	Registration, Technology, Operator, CellId, Signal, Imei, Sinr, Rssi, Rsrp, Rsrq sensorVal
 }
 
 // Energy Readings
