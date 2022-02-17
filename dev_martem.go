@@ -2,6 +2,7 @@ package godevman
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -47,35 +48,44 @@ func (sd *deviceMartem) HwInfo() (map[string]string, error) {
 }
 
 // Mobile modem signal data
-func (sd *deviceMartem) MobSignal() (mobSignal, error) {
-	out := new(mobSignal)
+func (sd *deviceMartem) MobSignal() (map[string]mobSignal, error) {
+	ret := make(map[string]mobSignal)
 	oid := ".1.3.6.1.4.1.43098.2.4"
 	r, err := sd.getmulti(oid, nil)
 	if err != nil {
-		return *out, err
+		return nil, err
 	}
 
+	reIdxs := regexp.MustCompile(`\.(\d+)$`)
+
 	for o, d := range r {
+		parts := reIdxs.FindStringSubmatch(string(o))
+		ifIdx := parts[1]
+		out, ok := ret[ifIdx]
+		if !ok {
+			out = mobSignal{}
+		}
+
 		switch o {
-		case oid + ".1.0":
+		case oid + ".1." + ifIdx:
 			out.Registration.IsSet = true
 			out.Registration.String = strings.TrimSpace(d.OctetString)
-		case oid + ".2.0":
+		case oid + ".2." + ifIdx:
 			out.Technology.IsSet = true
 			out.Technology.String = strings.TrimSpace(d.OctetString)
-		case oid + ".3.0":
+		case oid + ".3." + ifIdx:
 			out.Band.IsSet = true
 			out.Band.String = strings.TrimSpace(d.OctetString)
-		case oid + ".4.0":
+		case oid + ".4." + ifIdx:
 			out.Operator.IsSet = true
 			out.Operator.String = strings.TrimSpace(d.OctetString)
-		case oid + ".5.0":
+		case oid + ".5." + ifIdx:
 			out.Ber.IsSet = true
 			out.Ber.String = strings.TrimSpace(d.OctetString)
-		case oid + ".7.0":
+		case oid + ".7." + ifIdx:
 			out.Imei.IsSet = true
 			out.Imei.String = strings.TrimSpace(d.OctetString)
-		case oid + ".8.0":
+		case oid + ".8." + ifIdx:
 			v := sensorVal{
 				Unit:    "level(0-4)",
 				Divisor: 1,
@@ -84,9 +94,10 @@ func (sd *deviceMartem) MobSignal() (mobSignal, error) {
 			}
 			out.SignalBars = v
 		}
+		ret[ifIdx] = out
 	}
 
-	return *out, nil
+	return ret, nil
 }
 
 // Execute cli commands

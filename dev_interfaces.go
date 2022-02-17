@@ -126,7 +126,7 @@ type DevConfReader interface {
 
 // Mobile signal related functionality
 type DevMobReader interface {
-	MobSignal() (mobSignal, error)
+	MobSignal() (map[string]mobSignal, error)
 }
 
 // Test interface

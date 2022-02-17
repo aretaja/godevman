@@ -719,3 +719,11 @@ func SplitLineEnd(s string) []string {
 	out := re.Split(s, -1)
 	return out
 }
+
+// Returns absolute value of integger
+func IntAbs(val int64) uint64 {
+	if val < 0 {
+		return uint64(-val)
+	}
+	return uint64(val)
+}

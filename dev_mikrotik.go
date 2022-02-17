@@ -2,6 +2,7 @@ package godevman
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -16,6 +17,106 @@ func (sd *deviceMikrotik) SwVersion() (string, error) {
 	oid := ".1.3.6.1.4.1.14988.1.1.4.4.0"
 	r, err := sd.getone(oid)
 	return r[oid].OctetString, err
+}
+
+// Mobile modem signal data
+func (sd *deviceMikrotik) MobSignal() (map[string]mobSignal, error) {
+	ret := make(map[string]mobSignal)
+	oid := ".1.3.6.1.4.1.14988.1.1.16.1.1"
+	r, err := sd.getmulti(oid, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	reIdxs := regexp.MustCompile(`\.(\d+)$`)
+	tech := map[int64]string{
+		-1: "unknown",
+		0:  "gsmcompact",
+		1:  "gsm",
+		2:  "utran",
+		3:  "egprs",
+		4:  "hsdpa",
+		5:  "hsupa",
+		6:  "hsdpahsupa",
+		7:  "eutran",
+	}
+
+	for o, d := range r {
+		parts := reIdxs.FindStringSubmatch(string(o))
+		ifIdx := parts[1]
+		out, ok := ret[ifIdx]
+		if !ok {
+			out = mobSignal{}
+		}
+		switch o {
+		case oid + ".11." + ifIdx:
+			out.Imei.IsSet = true
+			out.Imei.String = strings.TrimSpace(d.OctetString)
+		case oid + ".2." + ifIdx:
+			v := sensorVal{
+				Unit:    "dBm",
+				Divisor: 1,
+				Value:   IntAbs(d.Integer),
+				IsSet:   true,
+			}
+			if d.Integer < 0 {
+				v.Divisor = -1
+			}
+			out.Rssi = v
+		case oid + ".3." + ifIdx:
+			v := sensorVal{
+				Unit:    "dB",
+				Divisor: 1,
+				Value:   IntAbs(d.Integer),
+				IsSet:   true,
+			}
+			if d.Integer < 0 {
+				v.Divisor = -1
+			}
+			out.Rsrq = v
+		case oid + ".4." + ifIdx:
+			v := sensorVal{
+				Unit:    "dBm",
+				Divisor: 1,
+				Value:   IntAbs(d.Integer),
+				IsSet:   true,
+			}
+			if d.Integer < 0 {
+				v.Divisor = -1
+			}
+			out.Rsrp = v
+		case oid + ".5." + ifIdx:
+			v := sensorVal{
+				Unit:    "",
+				Divisor: 1,
+				Value:   IntAbs(d.Integer),
+				IsSet:   true,
+			}
+			if d.Integer < 0 {
+				v.Divisor = -1
+			}
+			out.CellId = v
+		case oid + ".7." + ifIdx:
+			v := sensorVal{
+				Unit:    "dB",
+				Divisor: 1,
+				Value:   IntAbs(d.Integer),
+				IsSet:   true,
+			}
+			if d.Integer < 0 {
+				v.Divisor = -1
+			}
+			out.Sinr = v
+		case oid + ".6." + ifIdx:
+			if v, ok := tech[d.Integer]; ok {
+				out.Technology.IsSet = true
+				out.Technology.String = v
+			}
+		}
+		ret[ifIdx] = out
+	}
+
+	return ret, nil
 }
 
 // Prepare CLI session parameters
