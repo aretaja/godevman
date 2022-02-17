@@ -1,6 +1,9 @@
 package godevman
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Adds Martem specific SNMP functionality to snmpCommon type
 type deviceMartem struct {
@@ -12,6 +15,78 @@ func (sd *deviceMartem) SwVersion() (string, error) {
 	oid := ".1.3.6.1.4.1.43098.2.1.4.0"
 	r, err := sd.getone(oid)
 	return r[oid].OctetString, err
+}
+
+// Get device model
+// Example output:
+//  map[string]string{
+// 	 "hwtype":"GWM-C1-N-M2",
+// 	 "prodname":"Telem-GWM",
+// 	 "serial":"GWM-2767"
+// }
+func (sd *deviceMartem) HwInfo() (map[string]string, error) {
+	out := make(map[string]string)
+	oid := ".1.3.6.1.4.1.43098.2.1"
+	r, err := sd.getmulti(oid, []string{"6.0", "7.0", "8.0"})
+	if err != nil {
+		return out, err
+	}
+
+	for o, d := range r {
+		switch o {
+		case oid + ".7.0":
+			out["serial"] = d.OctetString
+		case oid + ".6.0":
+			out["prodname"] = d.OctetString
+		case oid + ".8.0":
+			out["hwtype"] = d.OctetString
+		}
+	}
+
+	return out, nil
+}
+
+// Mobile modem signal data
+func (sd *deviceMartem) MobSignal() (mobSignal, error) {
+	out := new(mobSignal)
+	oid := ".1.3.6.1.4.1.43098.2.4"
+	r, err := sd.getmulti(oid, nil)
+	if err != nil {
+		return *out, err
+	}
+
+	for o, d := range r {
+		switch o {
+		case oid + ".1.0":
+			out.Registration.IsSet = true
+			out.Registration.String = strings.TrimSpace(d.OctetString)
+		case oid + ".2.0":
+			out.Technology.IsSet = true
+			out.Technology.String = strings.TrimSpace(d.OctetString)
+		case oid + ".3.0":
+			out.Band.IsSet = true
+			out.Band.String = strings.TrimSpace(d.OctetString)
+		case oid + ".4.0":
+			out.Operator.IsSet = true
+			out.Operator.String = strings.TrimSpace(d.OctetString)
+		case oid + ".5.0":
+			out.Ber.IsSet = true
+			out.Ber.String = strings.TrimSpace(d.OctetString)
+		case oid + ".7.0":
+			out.Imei.IsSet = true
+			out.Imei.String = strings.TrimSpace(d.OctetString)
+		case oid + ".8.0":
+			v := sensorVal{
+				Unit:    "level(0-4)",
+				Divisor: 1,
+				Value:   uint64(d.Integer),
+				IsSet:   true,
+			}
+			out.SignalBars = v
+		}
+	}
+
+	return *out, nil
 }
 
 // Execute cli commands

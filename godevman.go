@@ -624,7 +624,7 @@ type onuInfo struct {
 
 // Mobile modem signal data
 type mobSignal struct {
-	Registration, Technology, Operator, CellId, Signal, Imei, Sinr, Rssi, Rsrp, Rsrq sensorVal
+	Registration, Technology, Band, Operator, Ber, CellId, Signal, SignalBars, Imei, Sinr, Rssi, Rsrp, Rsrq sensorVal
 }
 
 // Energy Readings
