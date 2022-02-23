@@ -6,6 +6,7 @@ import (
 	"math/bits"
 	"math/rand"
 	"net"
+	"regexp"
 	"time"
 )
 
@@ -709,4 +710,20 @@ func TcpReq(req, host, port string) ([]byte, error) {
 	}
 
 	return res, nil
+}
+
+// Split string on newline
+// Splits on and removes `\s*?\r?\n` from line end
+func SplitLineEnd(s string) []string {
+	re := regexp.MustCompile(`\s*?[\r\n]+`)
+	out := re.Split(s, -1)
+	return out
+}
+
+// Returns absolute value of integger
+func IntAbs(val int64) uint64 {
+	if val < 0 {
+		return uint64(-val)
+	}
+	return uint64(val)
 }

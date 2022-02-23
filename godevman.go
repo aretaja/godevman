@@ -13,48 +13,152 @@ import (
 
 	"github.com/aretaja/snmphelper"
 	"github.com/davecgh/go-spew/spew"
+	expect "github.com/google/goexpect"
 	"github.com/patrickmn/go-cache"
 )
 
 // Version of release
 const Version = "0.0.1"
 
+const time_iso8601_sec = "2006-01-02T15:04:05"
+
 // SNMP credentials for snmp session
 type SnmpCred struct {
-	User     string // [username|community]
-	Prot     string // [authentication protocol] (NoAuth|MD5|SHA)
-	Pass     string // [authentication protocol pass phrase]
-	Slevel   string // [security level] (noAuthNoPriv|authNoPriv|authPriv)
-	PrivProt string // [privacy protocol] (NoPriv|DES|AES|AES192|AES256|AES192C|AES256C)
-	PrivPass string // [privacy protocol pass phrase]
-	Ver      int    // [snmp version] (1|2|3)
+	// [username|community]
+	User string
+	// [authentication protocol] (NoAuth|MD5|SHA)
+	Prot string
+	// [authentication protocol pass phrase]
+	Pass string
+	// [security level] (noAuthNoPriv|authNoPriv|authPriv)
+	Slevel string
+	// [privacy protocol] (NoPriv|DES|AES|AES192|AES256|AES192C|AES256C)
+	PrivProt string
+	// [privacy protocol pass phrase]
+	PrivPass string
+	// [snmp version] (1|2|3)
+	Ver int
+}
+
+// CLI session parameters
+type CliParams struct {
+	// Prompt re pattern
+	// Default depends on device type
+	// Keep it as is if you are not sure
+	PromptRe string
+	// Cli errors re pattern
+	// Default depends on device type
+	// Keep it as is if you are not sure
+	ErrRe string
+	// Default "22" for ssh and "23" for telnet
+	Port string
+	// Full path to unencrypted PEM-encoded private key file
+	// If declared PublicKeys method for remote authentication will be used
+	KeyPath string
+	// Private key passphrase if any
+	KeySecret string
+	// Valid values are "\r\n" or "\n"
+	// Default depends on device type
+	// Keep it as is if you are not sure
+	LineEnd string
+	// CLI session credentials
+	Cred []string
+	// Commands which will be executed first on session start
+	// Default depends on device type
+	// Keep it as is if you are not sure
+	PreCmds []string
+	// Commands which will be executed to gracefully close session
+	// Default depends on device type
+	// Keep it as is if you are not sure
+	DisconnectCmds []string
+	// Use telnet instead of ssh. Default false
+	Telnet bool
+	// Session timeout (sec)
+	// Depends on device type
+	// Keep it as is if you are not sure
+	Timeout int
+}
+
+// CLI command exec options
+type CliCmdOpts struct {
+	// Parse errors from cli output after submitting commands
+	// Default false
+	ChkErr bool
+	// Run commands in privilrged mode (applicable on some device types)
+	// Default false
+	Priv bool
+}
+
+// Info needed for Device backup
+type BackupParams struct {
+	// IP of backup target system
+	TargetIp string
+	// Device identifier. Default is device ip
+	// Will be used as first part of backup file name
+	DevIdent string
+	// Base path for backups (if device type needs it)
+	BasePath string
+	// Credentials
+	Cred []string
 }
 
 // Parameters for new Device object initialization
 type Dparams struct {
-	Ip          string // ip of device
-	SysObjectId string // sysObjectId of Device
-	SnmpCred    SnmpCred
-	Webcred     []string // Websession credentials
+	// ip of device
+	Ip string
+	// sysObjectId of Device
+	// Will be not discovered If present
+	SysObjectId string
+	// Timezone for time related actions
+	// Default is Europe/Tallinn
+	TimeZone string
+	// Websession credentials
+	WebCred      []string
+	BackupParams BackupParams
+	SnmpCred     SnmpCred
+	CliParams    CliParams
 }
 
-// Websession parameters
+// Websession
 type webSess struct {
-	client *http.Client // web client of device
-	cred   []string     // web session credentials
+	// web client of device
+	client *http.Client
+	// web session credentials
+	cred []string
+}
+
+// Clisession
+type cliSess struct {
+	// cli expecter of device
+	client *expect.GExpect
+	// cli session parameters
+	params *CliParams
 }
 
 // Device object
 type device struct {
-	snmpSession *snmphelper.Session // snmp session of device
-	// clisession  devicecli.Dcli   // cli session of device
-	webSession  *webSess     // web session of device
-	cache       *cache.Cache // Cache object
-	ip          string       // ip of device
-	sysName     string       // sysname of device
-	sysObjectId string       // sysObjectId of device
-	debug       int          // Debug level
-	useCache    bool         // Enable use of cache
+	// snmp session of device
+	snmpSession *snmphelper.Session
+	// web session data of device
+	webSession *webSess
+	// cli session data of device
+	cliSession *cliSess
+	// Cache object
+	cache *cache.Cache
+	// Backup parameters
+	backupParams *BackupParams
+	// ip of device
+	ip string
+	// sysname of device
+	sysName string
+	// sysObjectId of device
+	sysObjectId string
+	// timezone related actions will use this.
+	timeZone string
+	// Debug level
+	debug int
+	// Enable use of cache
+	useCache bool
 }
 
 // Initialize new device object
@@ -77,12 +181,29 @@ func NewDevice(p *Dparams) (*device, error) {
 	}
 
 	// Setup Web session data
-	d.webSession = &webSess{
-		client: nil,
-		cred:   nil,
+	d.webSession = new(webSess)
+	if p.WebCred != nil {
+		d.webSession.cred = p.WebCred
 	}
-	if p.Webcred != nil {
-		d.webSession.cred = p.Webcred
+
+	// Setup CLI session data
+	d.cliSession = new(cliSess)
+	if p.CliParams.Cred != nil {
+		d.cliSession.params = &p.CliParams
+	}
+
+	// Setup Backup info parameters
+	d.backupParams = &p.BackupParams
+	if p.BackupParams.DevIdent == "" {
+		d.backupParams.DevIdent = d.ip
+	}
+
+	d.timeZone = "Europe/Tallinn"
+	if p.TimeZone != "" {
+		_, err := time.LoadLocation(p.TimeZone)
+		if err == nil {
+			d.timeZone = p.TimeZone
+		}
 	}
 
 	// validate sysObjectId if defined
@@ -115,40 +236,43 @@ func NewDevice(p *Dparams) (*device, error) {
 
 		d.snmpSession = sess
 
-		// get sysobjectid and sysname
-		oids := map[string]string{"sysname": ".1.3.6.1.2.1.1.5.0"}
-		if d.sysObjectId == "" {
-			oids["sysobjectid"] = ".1.3.6.1.2.1.1.2.0"
-		}
+		// Don't do any snmp communication if sysObjectId is present
+		if p.SysObjectId == "" {
+			// get sysobjectid and sysname
+			oids := map[string]string{"sysname": ".1.3.6.1.2.1.1.5.0"}
+			if d.sysObjectId == "" {
+				oids["sysobjectid"] = ".1.3.6.1.2.1.1.2.0"
+			}
 
-		o := make([]string, 0, len(oids))
-		for _, oid := range oids {
-			o = append(o, oid)
-		}
+			o := make([]string, 0, len(oids))
+			for _, oid := range oids {
+				o = append(o, oid)
+			}
 
-		res, err := sess.Get(o)
-		if err != nil {
-			// HACK Eltek eNexus controller don't respond to sysObjectID query
-			if strings.HasSuffix(err.Error(), "NoSuchObject") {
-				_, err2 := sess.Get([]string{".1.3.6.1.4.1.12148.10.2.2.0"})
-				if err2 == nil {
-					d.sysObjectId = ".1.3.6.1.4.1.12148.10"
+			res, err := sess.Get(o)
+			if err != nil {
+				// HACK Eltek eNexus controller don't respond to sysObjectID query
+				if strings.HasSuffix(err.Error(), "NoSuchObject") {
+					_, err2 := sess.Get([]string{".1.3.6.1.4.1.12148.10.2.2.0"})
+					if err2 == nil {
+						d.sysObjectId = ".1.3.6.1.4.1.12148.10"
+					}
+				} else {
+					return nil, fmt.Errorf("sysobjectid and sysname discovery failed - snmp error: %v", err)
 				}
 			} else {
-				return nil, fmt.Errorf("sysobjectid and sysname discovery failed - snmp error: %v", err)
-			}
-		} else {
-			if val, ok := oids["sysobjectid"]; ok {
-				soi := res[val].ObjectIdentifier
-				// HACK Eaton UPS returns not appropriate sysobjectid
-				if soi == ".2.1932768099.842208050.858927922.858993459.859026295.825438771.858993459" {
-					soi = ".1.3.6.1.4.1.705.1"
+				if val, ok := oids["sysobjectid"]; ok {
+					soi := res[val].ObjectIdentifier
+					// HACK Eaton UPS returns not appropriate sysobjectid
+					if soi == ".2.1932768099.842208050.858927922.858993459.859026295.825438771.858993459" {
+						soi = ".1.3.6.1.4.1.705.1"
+					}
+					d.sysObjectId = soi
 				}
-				d.sysObjectId = soi
 			}
-		}
 
-		d.sysName = res[oids["sysname"]].OctetString
+			d.sysName = res[oids["sysname"]].OctetString
+		}
 	}
 
 	// Setup cache
@@ -184,9 +308,14 @@ func (d *device) Morph() interface{} {
 				snmpCommon{*d},
 			}
 			res = &md
-		case strings.HasPrefix(d.sysObjectId, ".1.3.6.1.4.1.9.1.1") ||
-			strings.HasPrefix(d.sysObjectId, ".1.3.6.1.4.1.9.1.6"):
+		case strings.HasPrefix(d.sysObjectId, ".1.3.6.1.4.1.9.1.") ||
+			strings.HasPrefix(d.sysObjectId, ".1.3.6.1.4.1.9.6."):
 			md := deviceCisco{
+				snmpCommon{*d},
+			}
+			res = &md
+		case d.sysObjectId == ".1.3.6.1.4.1.28634.14":
+			md := deviceComap{
 				snmpCommon{*d},
 			}
 			res = &md
@@ -211,7 +340,7 @@ func (d *device) Morph() interface{} {
 				snmpCommon{*d},
 			}
 			res = &md
-		case strings.HasPrefix(d.sysObjectId, ".1.3.6.1.4.1.2636.1.1.1.2"):
+		case strings.HasPrefix(d.sysObjectId, ".1.3.6.1.4.1.2636.1.1.1.2."):
 			md := deviceJuniper{
 				snmpCommon{*d},
 			}
@@ -221,13 +350,40 @@ func (d *device) Morph() interface{} {
 			md := deviceLinux{sd}
 			res = &md
 
-			r, err := sd.System([]string{"Descr"})
+			r, err := md.System([]string{"Descr"})
 			if err == nil {
-				if match, _ := regexp.MatchString(`(?i)martem`, r.Descr.Value); match {
-					md := deviceMartem{
-						snmpCommon{*d},
-					}
+				bOpts, _ := md.BuildOpts()
+				vType, vErr := sd.getone(".1.3.6.1.4.1.12578.3.2.1.1.1.0")
+
+				martemRe := regexp.MustCompile(`(?i)martem`)
+				teltonikaRe := regexp.MustCompile(`(?i)teltonika`)
+				violaRe := regexp.MustCompile(`(?i)viola`)
+				violaHttpRe := regexp.MustCompile(`(?i)Revision: 1.10 | ppc`)
+
+				// HACK - Try to guess device type. Works for me ;)
+				switch {
+				case martemRe.Match([]byte(r.Descr.Value)):
+					md := deviceMartem{sd}
 					res = &md
+				case teltonikaRe.Match([]byte(r.Descr.Value)):
+					md := deviceTeltonika{sd}
+					res = &md
+				case vType != nil || vErr == nil:
+					md := deviceViola{sd}
+					res = &md
+				case violaRe.Match([]byte(r.Descr.Value)):
+					md := deviceViola{sd}
+					res = &md
+				case violaRe.Match([]byte(bOpts)):
+					md := deviceViola{sd}
+					res = &md
+				case violaHttpRe.Match([]byte(r.Descr.Value)):
+					violaWebRe := regexp.MustCompile(`(?ims)<body alink="#3a568d" link="#3a568d" vlink="#3a568d">`)
+					body, _ := sd.WebApiGet("")
+					if violaWebRe.Match(body) {
+						md := deviceViola{sd}
+						res = &md
+					}
 				}
 			}
 		case d.sysObjectId == ".1.3.6.1.4.1.14988.1":
@@ -235,7 +391,7 @@ func (d *device) Morph() interface{} {
 				snmpCommon{*d},
 			}
 			res = &md
-		case strings.HasPrefix(d.sysObjectId, ".1.3.6.1.4.1.8691.7"):
+		case strings.HasPrefix(d.sysObjectId, ".1.3.6.1.4.1.8691.7."):
 			md := deviceMoxa{
 				snmpCommon{*d},
 			}
@@ -281,6 +437,8 @@ func (d *device) Morph() interface{} {
 		switch {
 		case d.sysObjectId == "no-snmp-ecs":
 			res = &deviceEcsEmeter{*d}
+		case d.sysObjectId == "no-snmp-viola":
+			res = &deviceViolaNoSNMP{*d}
 		}
 	}
 
@@ -469,8 +627,37 @@ type onuInfo struct {
 	Enabled    valBool
 }
 
+// Mobile modem signal data
+type mobSignal struct {
+	Registration, Technology, Band, Operator, Ber, CellId, Signal, SignalBars, Imei, Sinr, Rssi, Rsrp, Rsrq sensorVal
+}
+
 // Energy Readings
 type eReadings struct {
 	day, night sensorVal
 	timeStamp  uint
+}
+
+// Power Generator info
+type genInfo struct {
+	GenMode      valString
+	BreakerState valString
+	EngineState  valString
+	CoolantTemp  sensorVal
+	RunHours     sensorVal
+	BatteryVolt  sensorVal
+	GenFreq      sensorVal
+	GenCurrentL1 sensorVal
+	GenCurrentL2 sensorVal
+	GenCurrentL3 sensorVal
+	GenPower     sensorVal
+	MainsVoltL3  sensorVal
+	MainsVoltL2  sensorVal
+	NumStarts    valU64
+	FuelConsum   sensorVal
+	MainsVoltL1  sensorVal
+	FuelLevel    sensorVal
+	GenVoltL3    sensorVal
+	GenVoltL2    sensorVal
+	GenVoltL1    sensorVal
 }

@@ -2,6 +2,8 @@ package godevman
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -10,62 +12,40 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// Adds Ericsson MINI-LINK TN specific SNMP functionality to snmpCommon type
-type deviceEricssonMlTn struct {
-	snmpCommon
-}
-
-// Get running software version
-func (sd *deviceEricssonMlTn) SwVersion() (string, error) {
-	if sd.sysObjectId == ".1.3.6.1.4.1.193.81.1.1.1" { // Compact Node
-		oid := ".1.3.6.1.4.1.193.81.2.7.1.1.1.4.1.1"
-		r, err := sd.getone(oid)
-		return strings.TrimSpace(r[oid].OctetString), err
+// Prepare CLI session parameters
+func (d *device) cliPrepare() (*CliParams, error) {
+	if d.cliSession == nil {
+		return nil, fmt.Errorf("cli parameters missing")
 	}
 
-	// get installed sw states
-	oid := ".1.3.6.1.4.1.193.81.2.7.1.2.1.5"
-	r, err := sd.snmpSession.Walk(oid, true, true)
-	if err != nil && sd.handleErr(oid, err) {
-		return "", err
+	params := *d.cliSession.params
+	if params.PromptRe == "" {
+		params.PromptRe = `[>#\$]\s*$`
 	}
-
-	for k, v := range r {
-		if v.Integer == 7 {
-			oid = ".1.3.6.1.4.1.193.81.2.7.1.2.1.3." + k
-			r, err := sd.getone(oid)
-			return strings.TrimSpace(r[oid].OctetString), err
+	if params.ErrRe == "" {
+		params.ErrRe = `(?im)(error|unknown|unrecognized|invalid)`
+	}
+	if params.LineEnd == "" {
+		params.LineEnd = "\r\n"
+	}
+	if params.DisconnectCmds == nil {
+		params.DisconnectCmds = []string{"exit"}
+	}
+	if params.Port == "" {
+		params.Port = "22"
+		if params.Telnet {
+			params.Port = "23"
 		}
 	}
-
-	return "", err
-}
-
-// Prepare CLI session parameters
-func (sd *deviceEricssonMlTn) cliPrepare() (*CliParams, error) {
-	defParams, err := sd.snmpCommon.cliPrepare()
-	if err != nil {
-		return nil, err
+	if params.Timeout == 0 {
+		params.Timeout = 10
 	}
 
-	params := defParams
-
-	// make device specific changes to default parameters
-	if sd.cliSession.params.PromptRe == "" {
-		params.PromptRe = `(>|#)\s?$`
-	}
-	if sd.cliSession.params.ErrRe == "" {
-		params.ErrRe = `(?im)(error|unknown|invalid|failed|timed out)`
-	}
-	if sd.cliSession.params.DisconnectCmds == nil {
-		params.DisconnectCmds = []string{"end", "exit"}
-	}
-
-	return params, nil
+	return &params, nil
 }
 
 // Create and store cli expect client and update d.cliSession.params
-func (d *deviceEricssonMlTn) startCli(p *CliParams) error {
+func (d *device) startCli(p *CliParams) error {
 	if d.cliSession.client != nil {
 		return nil
 	}
@@ -87,8 +67,7 @@ func (d *deviceEricssonMlTn) startCli(p *CliParams) error {
 
 	timeOut := time.Duration(p.Timeout) * time.Second
 
-	// verbose := false
-	verbose := false
+	var verbose bool
 	if d.debug > 0 {
 		verbose = true
 	}
@@ -104,17 +83,36 @@ func (d *deviceEricssonMlTn) startCli(p *CliParams) error {
 	ciOrder = append(ciOrder, "aes256-cbc", "aes192-cbc", "aes128-cbc", "3des-cbc")
 	config.Ciphers = ciOrder
 
+	auth := ssh.Password(pass)
+	if p.KeyPath != "" {
+		key, err := ioutil.ReadFile(p.KeyPath)
+		if err != nil {
+			log.Printf("warn: unable to read private key: %v", err)
+		} else {
+			// Create the Signer for this private key.
+			var signer ssh.Signer
+			if p.KeySecret != "" {
+				signer, err = ssh.ParsePrivateKeyWithPassphrase(key, []byte(p.KeySecret))
+				if err != nil {
+					log.Printf("warn: unable to parse password protected private key: %v", err)
+				}
+			} else {
+				signer, err = ssh.ParsePrivateKey(key)
+				if err != nil {
+					log.Printf("warn: unable to parse private key: %v", err)
+				}
+			}
+			auth = ssh.PublicKeys(signer)
+		}
+	}
+
 	cconf := &ssh.ClientConfig{
 		Config:          config,
-		User:            "cli",
-		Auth:            []ssh.AuthMethod{ssh.Password("")},
+		User:            user,
+		Auth:            []ssh.AuthMethod{auth},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         timeOut,
 	}
-
-	// Regexes for credentials
-	uRe := regexp.MustCompile(`User: ?$`)
-	pRe := regexp.MustCompile(`Password: ?$`)
 
 	// Create expecter
 	sshExpecter := func() (*expect.GExpect, error) {
@@ -127,30 +125,6 @@ func (d *deviceEricssonMlTn) startCli(p *CliParams) error {
 		if err != nil {
 			return nil, fmt.Errorf("create ssh expecter failed: %v", err)
 		}
-
-		// Check for valid login prompt
-		out, _, err := e.Expect(uRe, -1)
-
-		if err != nil {
-			return nil, fmt.Errorf("ssh login prompt match failed: %v out: %v", err, out)
-		}
-
-		err = e.Send(user + "\r")
-		if err != nil {
-			return nil, fmt.Errorf("ssh send username failed: %v", err)
-		}
-
-		// Check for valid password prompt
-		out, _, err = e.Expect(pRe, -1)
-		if err != nil {
-			return nil, fmt.Errorf("ssh password prompt match failed: %v out: %v", err, out)
-		}
-
-		err = e.Send(pass + "\r")
-		if err != nil {
-			return nil, fmt.Errorf("ssh send password failed: %v", err)
-		}
-
 		return e, nil
 	}
 
@@ -161,24 +135,26 @@ func (d *deviceEricssonMlTn) startCli(p *CliParams) error {
 		}
 
 		// Check for valid login prompt
+		uRe := regexp.MustCompile(`(?i)(ogin:|name:|as:)\s*$`)
 		out, _, err := e.Expect(uRe, -1)
 
 		if err != nil {
 			return nil, fmt.Errorf("telnet login prompt match failed: %v out: %v", err, out)
 		}
 
-		err = e.Send(user + "\r")
+		err = e.Send(user + p.LineEnd)
 		if err != nil {
 			return nil, fmt.Errorf("telnet send username failed: %v", err)
 		}
 
 		// Check for valid password prompt
+		pRe := regexp.MustCompile(`(?i)pass.*:\s*$`)
 		out, _, err = e.Expect(pRe, -1)
 		if err != nil {
 			return nil, fmt.Errorf("telnet password prompt match failed: %v out: %v", err, out)
 		}
 
-		err = e.Send(pass + "\r")
+		err = e.Send(pass + p.LineEnd)
 		if err != nil {
 			return nil, fmt.Errorf("telnet send password failed: %v", err)
 		}
@@ -212,13 +188,13 @@ func (d *deviceEricssonMlTn) startCli(p *CliParams) error {
 
 	// Run Initial commands if requested
 	for _, cmd := range p.PreCmds {
-		err := e.Send(cmd + "\r")
+		err := e.Send(cmd + p.LineEnd)
 		if err != nil {
 			return fmt.Errorf("send(%q) failed: %v", cmd, err)
 		}
 
 		out, _, err := e.Expect(re, -1)
-		out = strings.TrimPrefix(out, cmd+"\r")
+		out = strings.TrimPrefix(out, cmd+p.LineEnd)
 		if err != nil {
 			return fmt.Errorf("expect(%v) failed: %v out: %v", re, err, out)
 		}
@@ -230,35 +206,66 @@ func (d *deviceEricssonMlTn) startCli(p *CliParams) error {
 	return nil
 }
 
-// Execute cli commands
-func (sd *deviceEricssonMlTn) RunCmds(c []string, o *CliCmdOpts) ([]string, error) {
-	if o == nil {
-		o = new(CliCmdOpts)
+// Execute cli commands. Returns all sent, received data as string slice
+// c - cli commands, e - check for command errors
+func (d *device) cliCmds(c []string, f bool) ([]string, error) {
+	var output []string
+	e := d.cliSession.client
+	if e == nil {
+		return output, fmt.Errorf("active cli session not found")
 	}
 
-	p, err := sd.cliPrepare()
-	if err != nil {
-		return nil, err
-	}
+	pRe := regexp.MustCompile(d.cliSession.params.PromptRe)
+	eRe := regexp.MustCompile(d.cliSession.params.ErrRe)
 
-	err = sd.startCli(p)
-	if err != nil {
-		return nil, err
-	}
-
-	out, err := sd.cliCmds(c, o.ChkErr)
-	if err != nil {
-		err2 := sd.closeCli()
-		if err2 != nil {
-			err = fmt.Errorf("%v; session close error: %v", err, err2)
+	cnt := len(c)
+	for _, cmd := range c {
+		cnt--
+		output = append(output, cmd)
+		err := e.Send(cmd + d.cliSession.params.LineEnd)
+		if err != nil {
+			return output, fmt.Errorf("send(%q) failed: %v", cmd, err)
 		}
-		return out, err
+
+		// Dont expect specific prompt after last cmd
+		if cnt == 0 {
+			pRe = regexp.MustCompile(`(?m).*$`)
+		}
+		out, _, err := e.Expect(pRe, -1)
+		out = strings.TrimPrefix(out, cmd+d.cliSession.params.LineEnd)
+		output = append(output, out)
+
+		// Check for errors if requested
+		if f {
+			if eRe.Match([]byte(out)) {
+				return output, fmt.Errorf("cli command exec error: %s", out)
+			}
+		}
+
+		if err != nil {
+			return output, fmt.Errorf("expect(%v) failed: %v out: %v", pRe, err, out)
+		}
 	}
 
-	err = sd.closeCli()
-	if err != nil {
-		return out, err
+	return output, nil
+}
+
+// Close cli expect client
+func (d *device) closeCli() error {
+	e := d.cliSession.client
+	if e == nil {
+		return nil
 	}
 
-	return out, nil
+	if d.cliSession.params.DisconnectCmds != nil {
+		for _, cmd := range d.cliSession.params.DisconnectCmds {
+			err := e.Send(cmd + d.cliSession.params.LineEnd)
+			if err != nil {
+				break
+			}
+			time.Sleep(time.Second)
+		}
+	}
+	d.cliSession.client = nil
+	return nil
 }

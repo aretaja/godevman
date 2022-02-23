@@ -1,6 +1,9 @@
 package godevman
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // Adds Linux specific SNMP functionality to snmpCommon type
 type deviceLinux struct {
@@ -44,4 +47,44 @@ func (sd *deviceLinux) SwVersion() (string, error) {
 	}
 
 	return version, err
+}
+
+// Options passed to the configure script when this agent was built
+func (sd *deviceLinux) BuildOpts() (string, error) {
+	oid := ".1.3.6.1.4.1.2021.100.6.0"
+	r, err := sd.getone(oid)
+	return r[oid].OctetString, err
+}
+
+// Execute cli commands
+func (sd *deviceLinux) RunCmds(c []string, o *CliCmdOpts) ([]string, error) {
+	if o == nil {
+		o = new(CliCmdOpts)
+	}
+
+	p, err := sd.cliPrepare()
+	if err != nil {
+		return nil, err
+	}
+
+	err = sd.startCli(p)
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := sd.cliCmds(c, o.ChkErr)
+	if err != nil {
+		err2 := sd.closeCli()
+		if err2 != nil {
+			err = fmt.Errorf("%v; session close error: %v", err, err2)
+		}
+		return out, err
+	}
+
+	err = sd.closeCli()
+	if err != nil {
+		return out, err
+	}
+
+	return out, nil
 }

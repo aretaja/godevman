@@ -29,3 +29,59 @@ func (sd *deviceCisco) SwVersion() (string, error) {
 
 	return out, nil
 }
+
+// Prepare CLI session parameters
+func (sd *deviceCisco) cliPrepare() (*CliParams, error) {
+	defParams, err := sd.snmpCommon.cliPrepare()
+	if err != nil {
+		return nil, err
+	}
+
+	params := defParams
+
+	// make device specific changes to default parameters
+	if sd.cliSession.params.DisconnectCmds == nil {
+		params.DisconnectCmds = []string{"end", "exit"}
+	}
+	if sd.cliSession.params.PreCmds == nil {
+		params.PreCmds = []string{
+			"terminal length 0",
+			"terminal width 132",
+		}
+	}
+
+	return params, nil
+}
+
+// Execute cli commands
+func (sd *deviceCisco) RunCmds(c []string, o *CliCmdOpts) ([]string, error) {
+	if o == nil {
+		o = new(CliCmdOpts)
+	}
+
+	p, err := sd.cliPrepare()
+	if err != nil {
+		return nil, err
+	}
+
+	err = sd.startCli(p)
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := sd.cliCmds(c, o.ChkErr)
+	if err != nil {
+		err2 := sd.closeCli()
+		if err2 != nil {
+			err = fmt.Errorf("%v; session close error: %v", err, err2)
+		}
+		return out, err
+	}
+
+	err = sd.closeCli()
+	if err != nil {
+		return out, err
+	}
+
+	return out, nil
+}

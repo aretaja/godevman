@@ -594,7 +594,8 @@ func (sd *snmpCommon) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 		if err != nil {
 			if i == 0 {
 				continue
-			} else if sd.handleErr(mOid, err) {
+			}
+			if sd.handleErr(mOid, err) {
 				return out, fmt.Errorf("%s - %s", mOid, err)
 			}
 		}
