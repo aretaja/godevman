@@ -637,3 +637,27 @@ type eReadings struct {
 	day, night sensorVal
 	timeStamp  uint
 }
+
+// Power Generator info
+type genInfo struct {
+	GenMode      valString
+	BreakerState valString
+	EngineState  valString
+	CoolantTemp  sensorVal
+	RunHours     sensorVal
+	BatteryVolt  sensorVal
+	GenFreq      sensorVal
+	GenCurrentL1 sensorVal
+	GenCurrentL2 sensorVal
+	GenCurrentL3 sensorVal
+	GenPower     sensorVal
+	MainsVoltL3  sensorVal
+	MainsVoltL2  sensorVal
+	NumStarts    valU64
+	FuelConsum   sensorVal
+	MainsVoltL1  sensorVal
+	FuelLevel    sensorVal
+	GenVoltL3    sensorVal
+	GenVoltL2    sensorVal
+	GenVoltL1    sensorVal
+}

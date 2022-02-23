@@ -108,6 +108,11 @@ type DevOnusReader interface {
 	OnuInfo() (map[string]*onuInfo, error)
 }
 
+// Get Power Generator info
+type DevGenReader interface {
+	GeneratorInfo([]string) (genInfo, error)
+}
+
 // Get energy readings
 type DevEnergyMeterReader interface {
 	Ereadings() (*eReadings, error)
