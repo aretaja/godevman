@@ -695,8 +695,8 @@ func (sd *deviceUbiquiti) oltOnuSettings() (*UbiOnusSettings, error) {
 // Valid targets values: "All", "Descr", "Name", "Alias", "Type", "Speed", "Mac", "Admin",
 // "Oper", "InOctets", "InPkts", "InMcast", "InBcast", "InErrors", "OutOctets", "OutPkts",
 // "OutMcast", "OutBcast", "OutErrors"
-func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*ifInfo, error) {
-	out := make(map[string]*ifInfo)
+func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*IfInfo, error) {
+	out := make(map[string]*IfInfo)
 
 	idxs := make(map[string]bool)
 	for _, i := range idx {
@@ -832,7 +832,7 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*i
 
 	for i, d := range rawDescr {
 		wDescr := strings.Replace(d.OctetString, "+", "", -1)
-		out[i] = new(ifInfo)
+		out[i] = new(IfInfo)
 
 		for _, t := range targets {
 			if t == "All" || t == "Descr" {
@@ -1200,8 +1200,8 @@ func (sd *deviceUbiquiti) D1qVlans() (map[string]string, error) {
 
 // Get info from device web API
 // Returns vlan port relations
-func (sd *deviceUbiquiti) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
-	out := make(map[string]*d1qVlanInfo)
+func (sd *deviceUbiquiti) D1qVlanInfo() (map[string]*D1qVlanInfo, error) {
+	out := make(map[string]*D1qVlanInfo)
 
 	iInfo, err := sd.IfInfo([]string{"Descr"})
 	if err != nil {
@@ -1222,13 +1222,13 @@ func (sd *deviceUbiquiti) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 
 	for _, v := range vInfo.Vlans {
 		vidStr := strconv.Itoa(v.ID)
-		out[vidStr] = new(d1qVlanInfo)
+		out[vidStr] = new(D1qVlanInfo)
 		out[vidStr].Name = v.Name
-		out[vidStr].Ports = make(map[int]*d1qVlanBrPort)
+		out[vidStr].Ports = make(map[int]*D1qVlanBrPort)
 		for _, p := range v.Participation {
 			if i, ok := descr[p.Interface.ID]; ok {
 				pId, _ := strconv.Atoi(i)
-				out[vidStr].Ports[pId] = new(d1qVlanBrPort)
+				out[vidStr].Ports[pId] = new(D1qVlanBrPort)
 				out[vidStr].Ports[pId].IfIdx = pId
 				if p.Mode != "tagged" {
 					out[vidStr].Ports[pId].UnTag = true
@@ -1241,8 +1241,8 @@ func (sd *deviceUbiquiti) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 }
 
 // Get info via web API
-func (sd *deviceUbiquiti) IpInfo(ip ...string) (map[string]*ipInfo, error) {
-	out := make(map[string]*ipInfo)
+func (sd *deviceUbiquiti) IpInfo(ip ...string) (map[string]*IpInfo, error) {
+	out := make(map[string]*IpInfo)
 
 	ifInfo, err := sd.IfInfo([]string{"Descr"})
 	if err != nil {
@@ -1281,7 +1281,7 @@ func (sd *deviceUbiquiti) IpInfo(ip ...string) (map[string]*ipInfo, error) {
 
 					mask := fmt.Sprintf("%d.%d.%d.%d", m[0], m[1], m[2], m[3])
 
-					out[ipStr] = new(ipInfo)
+					out[ipStr] = new(IpInfo)
 					out[ipStr].IfIdx = int64(idxStr)
 					out[ipStr].Mask = mask
 				}
@@ -1310,8 +1310,8 @@ func (sd *deviceUbiquiti) IpInfo(ip ...string) (map[string]*ipInfo, error) {
 }
 
 // Get IP Interface info
-func (sd *deviceUbiquiti) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
-	out := make(map[string]*ipIfInfo)
+func (sd *deviceUbiquiti) IpIfInfo(ip ...string) (map[string]*IpIfInfo, error) {
+	out := make(map[string]*IpIfInfo)
 
 	ipInfo, err := sd.IpInfo(ip...)
 	if err != nil {
@@ -1324,7 +1324,7 @@ func (sd *deviceUbiquiti) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
 	}
 
 	for i, d := range ipInfo {
-		out[i] = new(ipIfInfo)
+		out[i] = new(IpIfInfo)
 		ifIdxStr := strconv.FormatInt(int64(d.IfIdx), 10)
 
 		var descr, alias string
@@ -1336,7 +1336,7 @@ func (sd *deviceUbiquiti) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
 			alias = ifdata.Alias.Value
 		}
 
-		out[i].ipInfo = *d
+		out[i].IpInfo = *d
 		out[i].Descr = descr
 		out[i].Alias = alias
 	}
@@ -1345,8 +1345,8 @@ func (sd *deviceUbiquiti) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
 }
 
 // Valid targets values: "All", "Fan", "Power", "Temp", "Ram", "Cpu", "Storage"
-func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[string]sensorVal, error) {
-	out := make(map[string]map[string]map[string]sensorVal)
+func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[string]SensorVal, error) {
+	out := make(map[string]map[string]map[string]SensorVal)
 
 	rawStats, err := sd.oltStatistics()
 	if err != nil {
@@ -1375,12 +1375,12 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 	for _, s := range *rawStats {
 		if (t["All"] || t["Fan"]) && len(s.Device.FanSpeeds) > 0 {
 			if out["Fan"] == nil {
-				out["Fan"] = make(map[string]map[string]sensorVal)
+				out["Fan"] = make(map[string]map[string]SensorVal)
 			}
 
 			for i, v := range s.Device.FanSpeeds {
 				sName := "Sensor" + strconv.Itoa(i+1)
-				sValue := sensorVal{
+				sValue := SensorVal{
 					Unit:    "rpm",
 					Divisor: 100,
 					Value:   uint64(*v.Value * 100),
@@ -1388,7 +1388,7 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				}
 
 				if out["Fan"]["Speed"] == nil {
-					out["Fan"]["Speed"] = make(map[string]sensorVal)
+					out["Fan"]["Speed"] = make(map[string]SensorVal)
 				}
 
 				out["Fan"]["Speed"][sName] = sValue
@@ -1397,12 +1397,12 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 
 		if (t["All"] || t["Temp"]) && len(s.Device.Temperatures) > 0 {
 			if out["Temp"] == nil {
-				out["Temp"] = make(map[string]map[string]sensorVal)
+				out["Temp"] = make(map[string]map[string]SensorVal)
 			}
 
 			for i, v := range s.Device.Temperatures {
 				sName := "Sensor" + strconv.Itoa(i+1)
-				sValue := sensorVal{
+				sValue := SensorVal{
 					Unit:    "°C",
 					Divisor: 100,
 					Value:   uint64(math.Abs(*v.Value * 100)),
@@ -1413,7 +1413,7 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				}
 
 				if out["Temp"]["Chasis"] == nil {
-					out["Temp"]["Chasis"] = make(map[string]sensorVal)
+					out["Temp"]["Chasis"] = make(map[string]SensorVal)
 				}
 
 				out["Temp"]["Chasis"][sName] = sValue
@@ -1422,18 +1422,18 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 
 		if (t["All"] || t["Power"]) && len(s.Device.Power) > 0 {
 			if out["Power"] == nil {
-				out["Power"] = make(map[string]map[string]sensorVal)
+				out["Power"] = make(map[string]map[string]SensorVal)
 			}
 
 			for i, v := range s.Device.Power {
 				sName := *v.PsuType + strconv.Itoa(i+1)
 
 				if out["Power"][sName] == nil {
-					out["Power"][sName] = make(map[string]sensorVal)
+					out["Power"][sName] = make(map[string]SensorVal)
 				}
 
 				if v.Current != nil {
-					sValue := sensorVal{
+					sValue := SensorVal{
 						Unit:    "A",
 						Divisor: 100,
 						Value:   uint64(*v.Current * 100),
@@ -1443,7 +1443,7 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				}
 
 				if v.Voltage != nil {
-					sValue := sensorVal{
+					sValue := SensorVal{
 						Unit:    "V",
 						Divisor: 100,
 						Value:   uint64(*v.Voltage * 100),
@@ -1453,7 +1453,7 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				}
 
 				if v.Power != nil {
-					sValue := sensorVal{
+					sValue := SensorVal{
 						Unit:    "W",
 						Divisor: 100,
 						Value:   uint64(*v.Power * 100),
@@ -1463,7 +1463,7 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				}
 
 				if v.Connected != nil {
-					sValue := sensorVal{
+					sValue := SensorVal{
 						Bool:  *v.Connected,
 						IsSet: true,
 					}
@@ -1474,16 +1474,16 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 
 		if (t["All"] || t["Cpu"]) && len(s.Device.CPU) > 0 {
 			if out["Cpu"] == nil {
-				out["Cpu"] = make(map[string]map[string]sensorVal)
+				out["Cpu"] = make(map[string]map[string]SensorVal)
 			}
 
 			for _, v := range s.Device.CPU {
 				if out["Cpu"][*v.Identifier] == nil {
-					out["Cpu"][*v.Identifier] = make(map[string]sensorVal)
+					out["Cpu"][*v.Identifier] = make(map[string]SensorVal)
 				}
 
 				if v.Temperature != nil {
-					sValue := sensorVal{
+					sValue := SensorVal{
 						Unit:    "°C",
 						Divisor: 100,
 						Value:   uint64(math.Abs(*v.Temperature * 100)),
@@ -1497,7 +1497,7 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				}
 
 				if v.Usage != nil {
-					sValue := sensorVal{
+					sValue := SensorVal{
 						Unit:    "%",
 						Divisor: 100,
 						Value:   uint64(*v.Usage * 100),
@@ -1510,16 +1510,16 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 
 		if (t["All"] || t["Storage"]) && len(s.Device.Storage) > 0 {
 			if out["Storage"] == nil {
-				out["Storage"] = make(map[string]map[string]sensorVal)
+				out["Storage"] = make(map[string]map[string]SensorVal)
 			}
 
 			for _, v := range s.Device.Storage {
 				if out["Storage"][*v.Name] == nil {
-					out["Storage"][*v.Name] = make(map[string]sensorVal)
+					out["Storage"][*v.Name] = make(map[string]SensorVal)
 				}
 
 				if v.Size != nil {
-					sValue := sensorVal{
+					sValue := SensorVal{
 						Unit:    "B",
 						Divisor: 1,
 						Value:   uint64(*v.Size),
@@ -1529,7 +1529,7 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				}
 
 				if v.SysName != nil {
-					sValue := sensorVal{
+					sValue := SensorVal{
 						String: *v.SysName,
 						IsSet:  true,
 					}
@@ -1537,7 +1537,7 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				}
 
 				if v.Temperature != nil {
-					sValue := sensorVal{
+					sValue := SensorVal{
 						Unit:    "°C",
 						Divisor: 100,
 						Value:   uint64(math.Abs(*v.Temperature * 100)),
@@ -1551,7 +1551,7 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 				}
 
 				if v.Used != nil {
-					sValue := sensorVal{
+					sValue := SensorVal{
 						Unit:    "B",
 						Divisor: 1,
 						Value:   uint64(*v.Used),
@@ -1564,14 +1564,14 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 
 		if t["All"] || t["Ram"] {
 			if out["Ram"] == nil {
-				out["Ram"] = make(map[string]map[string]sensorVal)
+				out["Ram"] = make(map[string]map[string]SensorVal)
 			}
 			if out["Ram"]["Status"] == nil {
-				out["Ram"]["Status"] = make(map[string]sensorVal)
+				out["Ram"]["Status"] = make(map[string]SensorVal)
 			}
 
 			if s.Device.RAM.Free != nil {
-				sValue := sensorVal{
+				sValue := SensorVal{
 					Unit:    "B",
 					Divisor: 1,
 					Value:   uint64(*s.Device.RAM.Free),
@@ -1581,7 +1581,7 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 			}
 
 			if s.Device.RAM.Total != nil {
-				sValue := sensorVal{
+				sValue := SensorVal{
 					Unit:    "B",
 					Divisor: 1,
 					Value:   uint64(*s.Device.RAM.Total),
@@ -1591,7 +1591,7 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 			}
 
 			if s.Device.RAM.Usage != nil {
-				sValue := sensorVal{
+				sValue := SensorVal{
 					Unit:    "%",
 					Divisor: 1,
 					Value:   uint64(*s.Device.RAM.Usage),
@@ -1606,8 +1606,8 @@ func (sd *deviceUbiquiti) Sensors(targets []string) (map[string]map[string]map[s
 
 // Get info from device web API
 // Returns OLT's ONU info
-func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
-	out := make(map[string]*onuInfo)
+func (sd *deviceUbiquiti) OnuInfo() (map[string]*OnuInfo, error) {
+	out := make(map[string]*OnuInfo)
 
 	oInfo, err := sd.oltOnus()
 	if err != nil {
@@ -1629,8 +1629,8 @@ func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
 
 	for _, s := range *oSettings {
 		if i, ok := onus[*s.Serial]; ok {
-			o := &onuInfo{
-				OltPort: valString{
+			o := &OnuInfo{
+				OltPort: ValString{
 					Value: "pon" + strconv.Itoa(*i.OltPort),
 					IsSet: true,
 				},
@@ -1665,7 +1665,7 @@ func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
 				o.Online.IsSet = true
 			}
 			if i.Statistics.TxBytes != nil {
-				v := sensorVal{
+				v := SensorVal{
 					Unit:    "B",
 					Divisor: 1,
 					Value:   uint64(*i.Statistics.TxBytes),
@@ -1675,7 +1675,7 @@ func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
 				o.TxBytes = v
 			}
 			if i.Statistics.RxBytes != nil {
-				v := sensorVal{
+				v := SensorVal{
 					Unit:    "B",
 					Divisor: 1,
 					Value:   uint64(*i.Statistics.RxBytes),
@@ -1685,7 +1685,7 @@ func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
 				o.RxBytes = v
 			}
 			if i.TxPower != nil {
-				v := sensorVal{
+				v := SensorVal{
 					Unit:    "dBm",
 					Divisor: 100,
 					Value:   uint64(math.Abs(*i.TxPower * 100)),
@@ -1698,7 +1698,7 @@ func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
 				o.TxPower = v
 			}
 			if i.RxPower != nil {
-				v := sensorVal{
+				v := SensorVal{
 					Unit:    "dBm",
 					Divisor: 100,
 					Value:   uint64(math.Abs(*i.RxPower * 100)),
@@ -1711,7 +1711,7 @@ func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
 				o.RxPower = v
 			}
 			if i.System.Mem != nil {
-				v := sensorVal{
+				v := SensorVal{
 					Unit:    "%",
 					Divisor: 1,
 					Value:   uint64(*i.System.Mem),
@@ -1721,7 +1721,7 @@ func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
 				o.Ram = v
 			}
 			if i.Distance != nil {
-				v := sensorVal{
+				v := SensorVal{
 					Unit:    "m",
 					Divisor: 1,
 					Value:   uint64(*i.Distance),
@@ -1731,7 +1731,7 @@ func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
 				o.Distance = v
 			}
 			if i.System.Temperature.CPU != nil {
-				v := sensorVal{
+				v := SensorVal{
 					Unit:    "°C",
 					Divisor: 100,
 					Value:   uint64(math.Abs(*i.System.Temperature.CPU * 100)),
@@ -1744,7 +1744,7 @@ func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
 				o.CpuTemp = v
 			}
 			if i.System.CPU != nil {
-				v := sensorVal{
+				v := SensorVal{
 					Unit:    "%",
 					Divisor: 1,
 					Value:   uint64(*i.System.CPU),
@@ -1754,7 +1754,7 @@ func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
 				o.CpuUsage = v
 			}
 			if s.BandwidthLimit.Download.Limit != nil && s.BandwidthLimit.Download.Enabled != nil && *s.BandwidthLimit.Download.Enabled {
-				v := sensorVal{
+				v := SensorVal{
 					Unit:    "B",
 					Divisor: 1,
 					Value:   uint64(*s.BandwidthLimit.Download.Limit),
@@ -1764,7 +1764,7 @@ func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
 				o.DownLimit = v
 			}
 			if s.BandwidthLimit.Upload.Limit != nil && s.BandwidthLimit.Upload.Enabled != nil && *s.BandwidthLimit.Upload.Enabled {
-				v := sensorVal{
+				v := SensorVal{
 					Unit:    "B",
 					Divisor: 1,
 					Value:   uint64(*s.BandwidthLimit.Upload.Limit),
@@ -1786,9 +1786,9 @@ func (sd *deviceUbiquiti) OnuInfo() (map[string]*onuInfo, error) {
 				o.ConTimeStr.IsSet = true
 			}
 			if i.Ports != nil {
-				o.Ports = make(map[string]onuPort)
+				o.Ports = make(map[string]OnuPort)
 				for _, p := range i.Ports {
-					pi := new(onuPort)
+					pi := new(OnuPort)
 					if p.Plugged != nil {
 						pi.Plugged.Value = *p.Plugged
 						pi.Plugged.IsSet = true

@@ -23,8 +23,8 @@ type deviceEricssonMlPt struct {
 }
 
 // Get IP Interface info
-func (sd *deviceEricssonMlPt) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
-	out := make(map[string]*ipIfInfo)
+func (sd *deviceEricssonMlPt) IpIfInfo(ip ...string) (map[string]*IpIfInfo, error) {
+	out := make(map[string]*IpIfInfo)
 
 	ipInfo, err := sd.IpInfo(ip...)
 	if err != nil {
@@ -33,9 +33,9 @@ func (sd *deviceEricssonMlPt) IpIfInfo(ip ...string) (map[string]*ipIfInfo, erro
 
 	for i, v := range ipInfo {
 		if out[i] == nil {
-			out[i] = new(ipIfInfo)
+			out[i] = new(IpIfInfo)
 		}
-		out[i].ipInfo = *v
+		out[i].IpInfo = *v
 	}
 
 	ifInfo, err := sd.Ip6IfDescr()
@@ -58,8 +58,8 @@ func (sd *deviceEricssonMlPt) IpIfInfo(ip ...string) (map[string]*ipIfInfo, erro
 }
 
 // Get RL info (map keys are radio ifdescriptions)
-func (sd *deviceEricssonMlPt) RlInfo() (map[string]*rlRadioIfInfo, error) {
-	out := make(map[string]*rlRadioIfInfo)
+func (sd *deviceEricssonMlPt) RlInfo() (map[string]*RlRadioIfInfo, error) {
+	out := make(map[string]*RlRadioIfInfo)
 
 	ctTable := ".1.3.6.1.4.1.193.223.2.7.1.1."
 	rltTable := ".1.3.6.1.4.1.193.223.2.7.3.1."
@@ -121,7 +121,7 @@ func (sd *deviceEricssonMlPt) RlInfo() (map[string]*rlRadioIfInfo, error) {
 		4: "Standby",
 	}
 
-	var temp valF64
+	var temp ValF64
 	if v, ok := r[tempOid]; ok {
 		t := strings.TrimSuffix(v.OctetString, " C")
 		if s, err := strconv.ParseFloat(t, 64); err == nil {
@@ -131,8 +131,8 @@ func (sd *deviceEricssonMlPt) RlInfo() (map[string]*rlRadioIfInfo, error) {
 	}
 
 	for idx, rd := range rltDescr {
-		i := new(rlRadioIfInfo)
-		i.Rau = make(map[string]*rauInfo)
+		i := new(RlRadioIfInfo)
+		i.Rau = make(map[string]*RauInfo)
 		i.Descr.Value = rd
 		i.Descr.IsSet = true
 		if s, err := strconv.Atoi(idx); err == nil {
@@ -147,7 +147,7 @@ func (sd *deviceEricssonMlPt) RlInfo() (map[string]*rlRadioIfInfo, error) {
 		}
 
 		for cIdx, cd := range ctDescr {
-			rf := new(rfInfo)
+			rf := new(RfInfo)
 			rf.Descr.Value = cd
 			rf.Descr.IsSet = true
 			if s, err := strconv.Atoi(cIdx); err == nil {
@@ -155,11 +155,11 @@ func (sd *deviceEricssonMlPt) RlInfo() (map[string]*rlRadioIfInfo, error) {
 				rf.IfIdx.IsSet = true
 			}
 
-			rau := new(rauInfo)
+			rau := new(RauInfo)
 			rau.Descr.Value = rd
 			rau.Descr.IsSet = true
 			rau.Temp = temp
-			rau.Rf = make(map[string]*rfInfo)
+			rau.Rf = make(map[string]*RfInfo)
 
 			rau.Rf[cd] = rf
 			if v, ok := r[ctTable+"1."+cIdx]; ok {
@@ -469,7 +469,7 @@ func (sd *deviceEricssonMlPt) SwVersion() (string, error) {
 }
 
 // Get last backup info
-func (sd *deviceEricssonMlPt) LastBackup() (*backupInfo, error) {
+func (sd *deviceEricssonMlPt) LastBackup() (*BackupInfo, error) {
 	if err := sd.WebAuth(sd.webSession.cred); err != nil {
 		return nil, fmt.Errorf("error: WebAuth - %s", err)
 	}
@@ -519,7 +519,7 @@ func (sd *deviceEricssonMlPt) LastBackup() (*backupInfo, error) {
 		ip[i], ip[j] = ip[j], ip[i]
 	}
 
-	out := new(backupInfo)
+	out := new(BackupInfo)
 	if info.Cdb.TLastBackUpTime > 0 {
 		out.TargetIP = ip.String()
 		out.TargetFile = info.Cdb.BLastBackUpFile
@@ -534,8 +534,8 @@ func (sd *deviceEricssonMlPt) LastBackup() (*backupInfo, error) {
 }
 
 // Get RL neighbour info (map keys are local ifdescriptions or "0" for PtP links)
-func (sd *deviceEricssonMlPt) RlNbrInfo() (map[string]*rlRadioFeIfInfo, error) {
-	res := new(rlRadioFeIfInfo)
+func (sd *deviceEricssonMlPt) RlNbrInfo() (map[string]*RlRadioFeIfInfo, error) {
+	res := new(RlRadioFeIfInfo)
 
 	body, err := sd.WebApiGet("CATEGORY=JSONREQUEST&FE_STATUS_VIEW")
 	if err != nil {
@@ -673,19 +673,19 @@ func (sd *deviceEricssonMlPt) RlNbrInfo() (map[string]*rlRadioFeIfInfo, error) {
 		ip[i], ip[j] = ip[j], ip[i]
 	}
 
-	res.FeIfDescr = valString{
+	res.FeIfDescr = ValString{
 		Value: info.FeStatusView.RadioLinkTerminal.BDistinguishedName,
 		IsSet: true,
 	}
-	res.SysName = valString{
+	res.SysName = ValString{
 		Value: info.FeStatusView.RadioLinkTerminal.BNeName,
 		IsSet: true,
 	}
-	res.Ip = valString{
+	res.Ip = ValString{
 		Value: ip.String(),
 		IsSet: true,
 	}
-	res.TxCapacity = valInt{
+	res.TxCapacity = ValInt{
 		Value: info.FeStatusView.CtActive.LActualTxCapacity * 1000,
 		IsSet: true,
 	}
@@ -700,7 +700,7 @@ func (sd *deviceEricssonMlPt) RlNbrInfo() (map[string]*rlRadioFeIfInfo, error) {
 		res.PowerOut.IsSet = true
 	}
 
-	out := map[string]*rlRadioFeIfInfo{"0": res}
+	out := map[string]*RlRadioFeIfInfo{"0": res}
 	return out, err
 }
 

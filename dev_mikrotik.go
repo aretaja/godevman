@@ -20,8 +20,8 @@ func (sd *deviceMikrotik) SwVersion() (string, error) {
 }
 
 // Mobile modem signal data
-func (sd *deviceMikrotik) MobSignal() (map[string]mobSignal, error) {
-	ret := make(map[string]mobSignal)
+func (sd *deviceMikrotik) MobSignal() (map[string]MobSignal, error) {
+	ret := make(map[string]MobSignal)
 	oid := ".1.3.6.1.4.1.14988.1.1.16.1.1"
 	r, err := sd.getmulti(oid, nil)
 	if err != nil {
@@ -46,14 +46,14 @@ func (sd *deviceMikrotik) MobSignal() (map[string]mobSignal, error) {
 		ifIdx := parts[1]
 		out, ok := ret[ifIdx]
 		if !ok {
-			out = mobSignal{}
+			out = MobSignal{}
 		}
 		switch o {
 		case oid + ".11." + ifIdx:
 			out.Imei.IsSet = true
 			out.Imei.String = strings.TrimSpace(d.OctetString)
 		case oid + ".2." + ifIdx:
-			v := sensorVal{
+			v := SensorVal{
 				Unit:    "dBm",
 				Divisor: 1,
 				Value:   IntAbs(d.Integer),
@@ -64,7 +64,7 @@ func (sd *deviceMikrotik) MobSignal() (map[string]mobSignal, error) {
 			}
 			out.Rssi = v
 		case oid + ".3." + ifIdx:
-			v := sensorVal{
+			v := SensorVal{
 				Unit:    "dB",
 				Divisor: 1,
 				Value:   IntAbs(d.Integer),
@@ -75,7 +75,7 @@ func (sd *deviceMikrotik) MobSignal() (map[string]mobSignal, error) {
 			}
 			out.Rsrq = v
 		case oid + ".4." + ifIdx:
-			v := sensorVal{
+			v := SensorVal{
 				Unit:    "dBm",
 				Divisor: 1,
 				Value:   IntAbs(d.Integer),
@@ -86,7 +86,7 @@ func (sd *deviceMikrotik) MobSignal() (map[string]mobSignal, error) {
 			}
 			out.Rsrp = v
 		case oid + ".5." + ifIdx:
-			v := sensorVal{
+			v := SensorVal{
 				Unit:    "",
 				Divisor: 1,
 				Value:   IntAbs(d.Integer),
@@ -97,7 +97,7 @@ func (sd *deviceMikrotik) MobSignal() (map[string]mobSignal, error) {
 			}
 			out.CellId = v
 		case oid + ".7." + ifIdx:
-			v := sensorVal{
+			v := SensorVal{
 				Unit:    "dB",
 				Divisor: 1,
 				Value:   IntAbs(d.Integer),
@@ -201,8 +201,8 @@ func (sd *deviceMikrotik) D1qVlans() (map[string]string, error) {
 
 // Get info from CLI
 // Returns vlan info
-func (sd *deviceMikrotik) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
-	var out = make(map[string]*d1qVlanInfo)
+func (sd *deviceMikrotik) D1qVlanInfo() (map[string]*D1qVlanInfo, error) {
+	var out = make(map[string]*D1qVlanInfo)
 
 	r, err := sd.IfInfo([]string{"Descr"})
 	if err != nil {
@@ -229,8 +229,8 @@ func (sd *deviceMikrotik) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 	}
 
 	for vlan, data := range info {
-		vi := &d1qVlanInfo{
-			Ports: make(map[int]*d1qVlanBrPort),
+		vi := &D1qVlanInfo{
+			Ports: make(map[int]*D1qVlanBrPort),
 		}
 
 		// parameter present check
@@ -260,7 +260,7 @@ func (sd *deviceMikrotik) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 				for _, port := range ports {
 					if ifIdx, ok := ifdescrIndex[port]; ok {
 						if _, ok := vi.Ports[ifIdx]; !ok {
-							vi.Ports[ifIdx] = &d1qVlanBrPort{
+							vi.Ports[ifIdx] = &D1qVlanBrPort{
 								IfIdx: ifIdx,
 							}
 						}
@@ -276,7 +276,7 @@ func (sd *deviceMikrotik) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 				for _, port := range ports {
 					if ifIdx, ok := ifdescrIndex[port]; ok {
 						if _, ok := vi.Ports[ifIdx]; !ok {
-							vi.Ports[ifIdx] = &d1qVlanBrPort{
+							vi.Ports[ifIdx] = &D1qVlanBrPort{
 								IfIdx: ifIdx,
 								UnTag: true,
 							}
@@ -288,7 +288,7 @@ func (sd *deviceMikrotik) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 				for _, port := range ports {
 					if ifIdx, ok := ifdescrIndex[port]; ok {
 						if _, ok := vi.Ports[ifIdx]; !ok {
-							vi.Ports[ifIdx] = &d1qVlanBrPort{
+							vi.Ports[ifIdx] = &D1qVlanBrPort{
 								IfIdx: ifIdx,
 							}
 						}
@@ -298,7 +298,7 @@ func (sd *deviceMikrotik) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 				for _, port := range ports {
 					if ifIdx, ok := ifdescrIndex[port]; ok {
 						if _, ok := vi.Ports[ifIdx]; !ok {
-							vi.Ports[ifIdx] = &d1qVlanBrPort{
+							vi.Ports[ifIdx] = &D1qVlanBrPort{
 								IfIdx: ifIdx,
 								UnTag: true,
 							}

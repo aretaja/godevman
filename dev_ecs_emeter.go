@@ -96,9 +96,9 @@ func (sd *deviceEcsEmeter) ecsVersion() (string, error) {
 
 // Get info from web
 // Valid targets values: "All", "Descr", "ObjectID", "Name"
-func (sd *deviceEcsEmeter) System(targets []string) (system, error) {
-	out := system{
-		ObjectID: valString{
+func (sd *deviceEcsEmeter) System(targets []string) (System, error) {
+	out := System{
+		ObjectID: ValString{
 			IsSet: true,
 			Value: "no-snmp-ecs",
 		},
@@ -143,13 +143,13 @@ func (sd *deviceEcsEmeter) System(targets []string) (system, error) {
 }
 
 // Get energy redings
-func (sd *deviceEcsEmeter) Ereadings() (*eReadings, error) {
+func (sd *deviceEcsEmeter) Ereadings() (*EReadings, error) {
 	ver, err := sd.ecsVersion()
 	if err != nil {
 		return nil, fmt.Errorf("ecsVersion error: %s", err)
 	}
 
-	out := eReadings{
+	out := EReadings{
 		timeStamp: uint(time.Now().Unix()),
 	}
 

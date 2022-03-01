@@ -49,8 +49,8 @@ func (sd *deviceTeltonika) HwInfo() (map[string]string, error) {
 }
 
 // Mobile modem signal data
-func (sd *deviceTeltonika) MobSignal() (map[string]mobSignal, error) {
-	ret := make(map[string]mobSignal)
+func (sd *deviceTeltonika) MobSignal() (map[string]MobSignal, error) {
+	ret := make(map[string]MobSignal)
 	oid := ".1.3.6.1.4.1.48690.2.2.1"
 	r, err := sd.getmulti(oid, nil)
 	if err != nil {
@@ -64,7 +64,7 @@ func (sd *deviceTeltonika) MobSignal() (map[string]mobSignal, error) {
 		ifIdx := parts[1]
 		out, ok := ret[ifIdx]
 		if !ok {
-			out = mobSignal{}
+			out = MobSignal{}
 		}
 		switch o {
 		case oid + ".11." + ifIdx:
@@ -80,7 +80,7 @@ func (sd *deviceTeltonika) MobSignal() (map[string]mobSignal, error) {
 			out.Imei.IsSet = true
 			out.Imei.String = strings.TrimSpace(d.OctetString)
 		case oid + ".12." + ifIdx:
-			v := sensorVal{
+			v := SensorVal{
 				Unit:    "dBm",
 				Divisor: 1,
 				Value:   IntAbs(d.Integer),
@@ -92,7 +92,7 @@ func (sd *deviceTeltonika) MobSignal() (map[string]mobSignal, error) {
 			out.Signal = v
 		case oid + ".19." + ifIdx:
 			f, _ := strconv.ParseFloat(strings.TrimSpace(d.OctetString), 64)
-			v := sensorVal{
+			v := SensorVal{
 				Unit:    "dBm",
 				Divisor: 10,
 				Value:   uint64(math.Abs(f * 10)),
@@ -104,7 +104,7 @@ func (sd *deviceTeltonika) MobSignal() (map[string]mobSignal, error) {
 			out.Sinr = v
 		case oid + ".20." + ifIdx:
 			f, _ := strconv.ParseFloat(strings.TrimSpace(d.OctetString), 64)
-			v := sensorVal{
+			v := SensorVal{
 				Unit:    "dBm",
 				Divisor: 1,
 				Value:   uint64(math.Abs(f)),
@@ -116,7 +116,7 @@ func (sd *deviceTeltonika) MobSignal() (map[string]mobSignal, error) {
 			out.Rsrp = v
 		case oid + ".21." + ifIdx:
 			f, _ := strconv.ParseFloat(strings.TrimSpace(d.OctetString), 64)
-			v := sensorVal{
+			v := SensorVal{
 				Unit:    "dBm",
 				Divisor: 10,
 				Value:   uint64(math.Abs(f * 10)),

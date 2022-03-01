@@ -19,8 +19,8 @@ type snmpCommon struct {
 
 // Get info from .iso.org.dod.internet.mgmt.mib-2.system tree
 // Valid targets values: "All", "Descr", "ObjectID", "UpTime", "Contact", "Name", "Location"
-func (sd *snmpCommon) System(targets []string) (system, error) {
-	var out system
+func (sd *snmpCommon) System(targets []string) (System, error) {
+	var out System
 	var idx []string
 
 	for _, t := range targets {
@@ -94,8 +94,8 @@ func (sd *snmpCommon) IfNumber() (int64, error) {
 // Valid targets values: "All", "AllNoIfx", "Descr", "Name", "Alias", "Type", "Mtu", "Speed", "Mac",
 // "Admin", "Oper", "Last", "InOctets", "InUcast", "InMcast", "InBcast", "InDiscards", "InErrors",
 // "OutOctets", "OutUcast", "OutMcast", "OutBcast", "OutDiscards", "OutErrors"
-func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInfo, error) {
-	out := make(map[string]*ifInfo)
+func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*IfInfo, error) {
+	out := make(map[string]*IfInfo)
 	iftable := ".1.3.6.1.2.1.2.2.1."
 	ifxtable := ".1.3.6.1.2.1.31.1.1.1."
 	var oids []string
@@ -175,7 +175,7 @@ func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInf
 	mapEntry := func(oid, prefix string) string {
 		i := strings.TrimPrefix(oid, prefix)
 		if out[i] == nil {
-			out[i] = new(ifInfo)
+			out[i] = new(IfInfo)
 		}
 		return i
 	}
@@ -337,8 +337,8 @@ func (sd *snmpCommon) IfInfo(targets []string, idx ...string) (map[string]*ifInf
 // Get info from .iso.org.dod.internet.mgmt.mib-2.ifMIB.ifMIBObjects.ifStackTable
 // Returns information on which sub-layers run below or on top of other sub-layers,
 // where each sub-layer corresponds to a conceptual row in the ifTable.
-func (sd *snmpCommon) IfStack() (ifStack, error) {
-	var out ifStack
+func (sd *snmpCommon) IfStack() (IfStack, error) {
+	var out IfStack
 	var down = make(map[int][]int)
 	var up = make(map[int][]int)
 
@@ -381,8 +381,8 @@ func (sd *snmpCommon) IfStack() (ifStack, error) {
 // Get info from .iso.org.dod.internet.mgmt.mib-2.entityMIB.entityMIBObjects.entityPhysical.entPhysicalTable
 // Valid targets values: "All", "Descr", "Position", "HwProduct", "HwRev", "Serial", "Manufacturer",
 //"Model", "SwProduct", "SwRev", "ParentId"
-func (sd *snmpCommon) InvInfo(targets []string, idx ...string) (map[string]*invInfo, error) {
-	out := make(map[string]*invInfo)
+func (sd *snmpCommon) InvInfo(targets []string, idx ...string) (map[string]*InvInfo, error) {
+	out := make(map[string]*InvInfo)
 	invTable := ".1.3.6.1.2.1.47.1.1.1.1."
 	var oids []string
 
@@ -420,7 +420,7 @@ func (sd *snmpCommon) InvInfo(targets []string, idx ...string) (map[string]*invI
 	mapEntry := func(oid, prefix string) string {
 		i := strings.TrimPrefix(oid, prefix)
 		if out[i] == nil {
-			out[i] = new(invInfo)
+			out[i] = new(InvInfo)
 		}
 		return i
 	}
@@ -571,8 +571,8 @@ func (sd *snmpCommon) D1qVlans() (map[string]string, error) {
 }
 
 // Get info from .iso.org.dod.internet.mgmt.mib-2.dot1dBridge.qBridgeMIB.qBridgeMIBObjects.dot1qVlan.dot1qVlanCurrentTable
-func (sd *snmpCommon) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
-	out := make(map[string]*d1qVlanInfo)
+func (sd *snmpCommon) D1qVlanInfo() (map[string]*D1qVlanInfo, error) {
+	out := make(map[string]*D1qVlanInfo)
 	mOids := []string{".1.3.6.1.2.1.17.7.1.4.3.1.2", ".1.3.6.1.2.1.17.7.1.4.2.1.4"}
 	uOids := []string{".1.3.6.1.2.1.17.7.1.4.3.1.4", ".1.3.6.1.2.1.17.7.1.4.2.1.5"}
 
@@ -613,12 +613,12 @@ func (sd *snmpCommon) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 		for v, bytes := range mBytes {
 			bMap := BitMap(bytes)
 
-			ports := make(map[int]*d1qVlanBrPort)
+			ports := make(map[int]*D1qVlanBrPort)
 			for p := range bMap {
-				ports[p] = &d1qVlanBrPort{IfIdx: ifIdx[strconv.Itoa(p)]}
+				ports[p] = &D1qVlanBrPort{IfIdx: ifIdx[strconv.Itoa(p)]}
 			}
 
-			out[v] = &d1qVlanInfo{
+			out[v] = &D1qVlanInfo{
 				Name:  vlans[v],
 				Ports: ports,
 			}
@@ -661,8 +661,8 @@ func (sd *snmpCommon) D1qVlanInfo() (map[string]*d1qVlanInfo, error) {
 }
 
 // Get info from .iso.org.dod.internet.mgmt.mib-2.ip.ipAddrTable
-func (sd *snmpCommon) IpInfo(ip ...string) (map[string]*ipInfo, error) {
-	out := make(map[string]*ipInfo)
+func (sd *snmpCommon) IpInfo(ip ...string) (map[string]*IpInfo, error) {
+	out := make(map[string]*IpInfo)
 	ipTable := ".1.3.6.1.2.1.4.20.1."
 	oids := []string{ipTable + "2", ipTable + "3"}
 
@@ -670,7 +670,7 @@ func (sd *snmpCommon) IpInfo(ip ...string) (map[string]*ipInfo, error) {
 		i := strings.TrimPrefix(oid, prefix)
 		i = strings.TrimPrefix(i, "0.")
 		if out[i] == nil {
-			out[i] = new(ipInfo)
+			out[i] = new(IpInfo)
 		}
 		return i
 	}
@@ -705,8 +705,8 @@ func (sd *snmpCommon) IpInfo(ip ...string) (map[string]*ipInfo, error) {
 }
 
 // Get IP Interface info
-func (sd *snmpCommon) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
-	out := make(map[string]*ipIfInfo)
+func (sd *snmpCommon) IpIfInfo(ip ...string) (map[string]*IpIfInfo, error) {
+	out := make(map[string]*IpIfInfo)
 
 	ipInfo, err := sd.IpInfo(ip...)
 	if err != nil {
@@ -719,9 +719,9 @@ func (sd *snmpCommon) IpIfInfo(ip ...string) (map[string]*ipIfInfo, error) {
 		ifIdxs = append(ifIdxs, strconv.FormatInt(int64(v.IfIdx), 10))
 
 		if out[i] == nil {
-			out[i] = new(ipIfInfo)
+			out[i] = new(IpIfInfo)
 		}
-		out[i].ipInfo = *v
+		out[i].IpInfo = *v
 	}
 
 	ifInfo, err := sd.IfInfo([]string{"Descr", "Alias"}, ifIdxs...)
