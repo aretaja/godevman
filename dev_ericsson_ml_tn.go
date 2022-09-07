@@ -24,21 +24,19 @@ func (sd *deviceEricssonMlTn) SwVersion() (string, error) {
 	}
 
 	// get installed sw states
-	oid := ".1.3.6.1.4.1.193.81.2.7.1.2.1.5"
-	r, err := sd.snmpSession.Walk(oid, true, true)
+	oid := ".1.3.6.1.4.1.193.81.2.7.1.3.0"
+	r, err := sd.getone(oid)
 	if err != nil && sd.handleErr(oid, err) {
 		return "", err
 	}
 
-	for k, v := range r {
-		if v.Integer == 7 {
-			oid = ".1.3.6.1.4.1.193.81.2.7.1.2.1.3." + k
-			r, err := sd.getone(oid)
-			return strings.TrimSpace(r[oid].OctetString), err
-		}
+	oid = ".1.3.6.1.4.1.193.81.2.7.1.2.1.3." + fmt.Sprintf("%d", r[oid].Integer)
+	r, err = sd.getone(oid)
+	if err != nil && sd.handleErr(oid, err) {
+		return "", err
 	}
 
-	return "", err
+	return strings.TrimSpace(r[oid].OctetString), err
 }
 
 // Prepare CLI session parameters
