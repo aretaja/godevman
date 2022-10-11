@@ -1,6 +1,6 @@
 module github.com/aretaja/godevman
 
-go 1.17
+go 1.19
 
 // For local development
 //replace github.com/aretaja/snmphelper => ../snmphelper
