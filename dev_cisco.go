@@ -30,6 +30,109 @@ func (sd *deviceCisco) SwVersion() (string, error) {
 	return out, nil
 }
 
+// Get Phase sync info
+func (sd *deviceCisco) PhaseSyncInfo() (*PhaseSyncInfo, error) {
+	var gbaseoids = map[string]string{
+		"parentGm": ".1.3.6.1.4.1.9.9.760.1.2.2.1.8",
+		"state":    ".1.3.6.1.4.1.9.9.760.1.2.4.1.4",
+		"hops":     ".1.3.6.1.4.1.9.9.760.1.2.1.1.4",
+	}
+
+	var wbaseoids = map[string]string{
+		"pNames": ".1.3.6.1.4.1.9.9.760.1.2.7.1.5",
+		"pRoles": ".1.3.6.1.4.1.9.9.760.1.2.7.1.6",
+	}
+
+	var clockStateType = map[int64]string{
+		1: "freerun",
+		2: "holdover",
+		3: "acquiring",
+		4: "frequencyLocked",
+		5: "phaseAligned",
+	}
+
+	var clockRoleType = map[int64]string{
+		1: "master",
+		2: "slave",
+	}
+
+	var out = new(PhaseSyncInfo)
+	r, err := sd.snmpSession.Walk(gbaseoids["hops"], true, true)
+	if err != nil && sd.handleErr(gbaseoids["hops"], err) {
+		return out, err
+	}
+
+	if len(r) != 1 {
+		return out, fmt.Errorf("multiple indexes not supported")
+	}
+
+	var idx string
+	for idx = range r {
+		break
+	}
+
+	out.HopsToGm = ValU64{
+		Value: r[idx].Counter32,
+		IsSet: true,
+	}
+
+	var n = make(map[string]string)
+	var oids []string
+	for name, bo := range gbaseoids {
+		if name == "hops" {
+			continue
+		}
+		oid := bo + "." + idx
+		oids = append(oids, oid)
+		n[oid] = name
+	}
+
+	r, err = sd.getmulti("", oids)
+	if err != nil {
+		return out, err
+	}
+
+	for o, res := range r {
+		if n[o] == "parentGm" && res.Vtype == "OctetString" {
+			out.ParentGmIdent = ValString{
+				Value: res.OctetString,
+				IsSet: true,
+			}
+		} else if n[o] == "state" && res.Vtype == "Integer" {
+			if value, ok := clockStateType[res.Integer]; ok {
+				out.State = ValString{
+					Value: value,
+					IsSet: true,
+				}
+			}
+		}
+	}
+
+	pNames, err := sd.snmpSession.Walk(wbaseoids["pNames"]+"."+idx, true, true)
+	if err != nil && sd.handleErr(wbaseoids["pNames"]+"."+idx, err) {
+		return out, err
+	}
+
+	pRoles, err := sd.snmpSession.Walk(wbaseoids["pRoles"]+"."+idx, true, true)
+	if err != nil && sd.handleErr(wbaseoids["pRoles"]+"."+idx, err) {
+		return out, err
+	}
+
+	ports := make(map[string]string)
+	for n, res := range pNames {
+		name := fmt.Sprintf("%s(%s)", n, res.OctetString)
+		state := ""
+		if value, ok := clockRoleType[pRoles[n].Integer]; ok {
+			state = value
+		}
+		ports[name] = state
+	}
+
+	out.PortsRole = ports
+
+	return out, nil
+}
+
 // Prepare CLI session parameters
 func (sd *deviceCisco) cliPrepare() (*CliParams, error) {
 	defParams, err := sd.snmpCommon.cliPrepare()

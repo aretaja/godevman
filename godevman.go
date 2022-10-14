@@ -627,6 +627,21 @@ type OnuInfo struct {
 	Enabled    ValBool
 }
 
+// Phase Sync info
+type PhaseSyncInfo struct {
+	PortsRole     map[string]string
+	ParentGmIdent ValString
+	State         ValString
+	HopsToGm      ValU64
+}
+
+// Frequency Sync info
+type FreqSyncInfo struct {
+	PortsQaLevel map[string]string
+	ClockMode    ValString
+	ClockQaLevel ValString
+}
+
 // Mobile modem signal data
 type MobSignal struct {
 	Registration, Technology, Band, Operator, Ber, CellId, Signal, SignalBars, Imei, Sinr, Rssi, Rsrp, Rsrq SensorVal

@@ -108,6 +108,16 @@ type DevOnusReader interface {
 	OnuInfo() (map[string]*OnuInfo, error)
 }
 
+// Get Phase Sync info
+type DevPhaseSyncReader interface {
+	PhaseSyncInfo() (*PhaseSyncInfo, error)
+}
+
+// Get Frequency Sync info
+type DevFreqSyncReader interface {
+	FreqSyncInfo() (*FreqSyncInfo, error)
+}
+
 // Get Power Generator info
 type DevGenReader interface {
 	GeneratorInfo([]string) (GenInfo, error)
