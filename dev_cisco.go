@@ -3,6 +3,8 @@ package godevman
 import (
 	"fmt"
 	"regexp"
+
+	"github.com/aretaja/snmphelper"
 )
 
 // Adds Cisco specific SNMP functionality to snmpCommon type
@@ -108,7 +110,7 @@ func (sd *deviceCisco) PhaseSyncInfo() (*PhaseSyncInfo, error) {
 		}
 	}
 
-	pNames, err := sd.snmpSession.Walk(wbaseoids["pNames"]+"."+idx, true, true)
+	sNames, err := sd.snmpSession.Walk(wbaseoids["pNames"]+"."+idx, true, true)
 	if err != nil && sd.handleErr(wbaseoids["pNames"]+"."+idx, err) {
 		return out, err
 	}
@@ -118,17 +120,128 @@ func (sd *deviceCisco) PhaseSyncInfo() (*PhaseSyncInfo, error) {
 		return out, err
 	}
 
-	ports := make(map[string]string)
-	for n, res := range pNames {
+	srcs := make(map[string]string)
+	for n, res := range sNames {
 		name := fmt.Sprintf("%s(%s)", n, res.OctetString)
 		state := ""
 		if value, ok := clockRoleType[pRoles[n].Integer]; ok {
 			state = value
 		}
-		ports[name] = state
+		srcs[name] = state
 	}
 
-	out.PortsRole = ports
+	out.SrcsRole = srcs
+
+	return out, nil
+}
+
+// Get Frequency sync info
+func (sd *deviceCisco) FreqSyncInfo() (*FreqSyncInfo, error) {
+	var baseoids = map[string]string{
+		"cMode":    ".1.3.6.1.4.1.9.9.761.1.1.1.1.3",
+		"qLevel":   ".1.3.6.1.4.1.9.9.761.1.1.2.1.4",
+		"srcNames": ".1.3.6.1.4.1.9.9.761.1.1.3.1.2",
+		"srcQ":     ".1.3.6.1.4.1.9.9.761.1.1.3.1.11",
+	}
+
+	var clockMode = map[int64]string{
+		1: "unknown",
+		2: "freerun",
+		3: "holdover",
+		4: "locked",
+	}
+
+	var qualityLevel = map[int64]string{
+		1:  "NULL",
+		2:  "DNU",
+		3:  "DUS",
+		4:  "FAILED",
+		5:  "INV0",
+		6:  "INV1",
+		7:  "INV2",
+		8:  "INV3",
+		9:  "INV4",
+		10: "INV5",
+		11: "INV6",
+		12: "INV7",
+		13: "INV8",
+		14: "INV9",
+		15: "INV10",
+		16: "INV11",
+		17: "INV12",
+		18: "INV13",
+		19: "INV14",
+		20: "INV15",
+		21: "NSUPP",
+		22: "PRC",
+		23: "PROV",
+		24: "PRS",
+		25: "SEC",
+		26: "SMC",
+		27: "SSUA",
+		28: "SSUB",
+		29: "ST2",
+		30: "ST3",
+		31: "ST3E",
+		32: "ST4",
+		33: "STU",
+		34: "TNC",
+		35: "UNC",
+		36: "UNK",
+	}
+
+	var out = new(FreqSyncInfo)
+	var res = make(map[string]snmphelper.SnmpOut)
+	for name, o := range baseoids {
+		r, err := sd.snmpSession.Walk(o, true, true)
+		if err != nil && sd.handleErr(o, err) {
+			return out, err
+		}
+		res[name] = r
+	}
+
+	if len(res["cMode"]) != 1 && len(res["qLevel"]) != 1 {
+		return out, fmt.Errorf("multiple indexes not supported")
+	}
+
+	var idx string
+	for idx = range res["cMode"] {
+		break
+	}
+
+	if res["cMode"][idx].Vtype == "Integer" {
+		if value, ok := clockMode[res["cMode"][idx].Integer]; ok {
+			out.ClockMode = ValString{
+				Value: value,
+				IsSet: true,
+			}
+		}
+	}
+
+	for idx = range res["qLevel"] {
+		break
+	}
+
+	if res["qLevel"][idx].Vtype == "Integer" {
+		if value, ok := qualityLevel[res["qLevel"][idx].Integer]; ok {
+			out.ClockQaLevel = ValString{
+				Value: value,
+				IsSet: true,
+			}
+		}
+	}
+
+	srcs := make(map[string]string)
+	for n, s := range res["srcNames"] {
+		name := fmt.Sprintf("%s(%s)", n, s.OctetString)
+		state := ""
+		if value, ok := qualityLevel[res["srcQ"][n].Integer]; ok {
+			state = value
+		}
+		srcs[name] = state
+	}
+
+	out.SrcsQaLevel = srcs
 
 	return out, nil
 }

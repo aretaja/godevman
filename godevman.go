@@ -629,7 +629,7 @@ type OnuInfo struct {
 
 // Phase Sync info
 type PhaseSyncInfo struct {
-	PortsRole     map[string]string
+	SrcsRole      map[string]string
 	ParentGmIdent ValString
 	State         ValString
 	HopsToGm      ValU64
@@ -637,7 +637,7 @@ type PhaseSyncInfo struct {
 
 // Frequency Sync info
 type FreqSyncInfo struct {
-	PortsQaLevel map[string]string
+	SrcsQaLevel  map[string]string
 	ClockMode    ValString
 	ClockQaLevel ValString
 }
