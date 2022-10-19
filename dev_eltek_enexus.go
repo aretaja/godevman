@@ -10,8 +10,8 @@ type deviceEltekEnexus struct {
 // Get info from .iso.org.dod.internet.private.enterprises.eltek.eNexus.powerSystem tree
 // Replaces common snmp method
 // Valid targets values: "All", "Descr", "ObjectID", "UpTime", "Contact", "Name", "Location"
-func (sd *deviceEltekEnexus) System(targets []string) (system, error) {
-	var out system
+func (sd *deviceEltekEnexus) System(targets []string) (System, error) {
+	var out System
 	var idx []string
 
 	for _, t := range targets {

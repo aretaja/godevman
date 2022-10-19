@@ -4,7 +4,7 @@ import "net/http"
 
 // Get system info
 type DevSysReader interface {
-	System([]string) (system, error)
+	System([]string) (System, error)
 }
 
 // Set system info
@@ -16,11 +16,11 @@ type DevSysWriter interface {
 
 // Functionality related to interfaces
 type DevIfReader interface {
-	IfInfo([]string, ...string) (map[string]*ifInfo, error)
+	IfInfo([]string, ...string) (map[string]*IfInfo, error)
 	// Get ifNumber
 	IfNumber() (int64, error)
 	// Get interfaces stack info
-	IfStack() (ifStack, error)
+	IfStack() (IfStack, error)
 }
 
 type DevIfWriter interface {
@@ -32,7 +32,7 @@ type DevIfWriter interface {
 
 // Functionality related to inventory
 type DevInvReader interface {
-	InvInfo([]string, ...string) (map[string]*invInfo, error)
+	InvInfo([]string, ...string) (map[string]*InvInfo, error)
 	// Get interface to inventory relations
 	IfInventory() (map[int]int, error)
 }
@@ -43,13 +43,13 @@ type DevVlanReader interface {
 	// Get dot1q vlans
 	BrPort2IfIdx() (map[string]int, error)
 	// Get dot1q vlan to port relations
-	D1qVlanInfo() (map[string]*d1qVlanInfo, error)
+	D1qVlanInfo() (map[string]*D1qVlanInfo, error)
 }
 
 // Functionality related to IP addresses
 type DevIpReader interface {
-	IpInfo(...string) (map[string]*ipInfo, error)
-	IpIfInfo(...string) (map[string]*ipIfInfo, error)
+	IpInfo(...string) (map[string]*IpInfo, error)
+	IpIfInfo(...string) (map[string]*IpIfInfo, error)
 }
 
 // Functionality related to Get IPv6 addresses
@@ -83,13 +83,13 @@ type DevWebSessManager interface {
 
 // Get RL neighbour info
 type DevRlReader interface {
-	RlInfo() (map[string]*rlRadioIfInfo, error)
-	RlNbrInfo() (map[string]*rlRadioFeIfInfo, error)
+	RlInfo() (map[string]*RlRadioIfInfo, error)
+	RlNbrInfo() (map[string]*RlRadioFeIfInfo, error)
 }
 
 // Get backup info
 type DevBackupReader interface {
-	LastBackup() (*backupInfo, error)
+	LastBackup() (*BackupInfo, error)
 }
 
 // Backup initiator
@@ -100,22 +100,32 @@ type DevBackupper interface {
 
 // Get environment sensors info
 type DevSensorsReader interface {
-	Sensors([]string) (map[string]map[string]map[string]sensorVal, error)
+	Sensors([]string) (map[string]map[string]map[string]SensorVal, error)
 }
 
 // Get ONU info
 type DevOnusReader interface {
-	OnuInfo() (map[string]*onuInfo, error)
+	OnuInfo() (map[string]*OnuInfo, error)
+}
+
+// Get Phase Sync info
+type DevPhaseSyncReader interface {
+	PhaseSyncInfo() (*PhaseSyncInfo, error)
+}
+
+// Get Frequency Sync info
+type DevFreqSyncReader interface {
+	FreqSyncInfo() (*FreqSyncInfo, error)
 }
 
 // Get Power Generator info
 type DevGenReader interface {
-	GeneratorInfo([]string) (genInfo, error)
+	GeneratorInfo([]string) (GenInfo, error)
 }
 
 // Get energy readings
 type DevEnergyMeterReader interface {
-	Ereadings() (*eReadings, error)
+	Ereadings() (*EReadings, error)
 }
 
 // CLI releated functionality
@@ -131,7 +141,7 @@ type DevConfReader interface {
 
 // Mobile signal related functionality
 type DevMobReader interface {
-	MobSignal() (map[string]mobSignal, error)
+	MobSignal() (map[string]MobSignal, error)
 }
 
 // Test interface

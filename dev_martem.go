@@ -48,8 +48,8 @@ func (sd *deviceMartem) HwInfo() (map[string]string, error) {
 }
 
 // Mobile modem signal data
-func (sd *deviceMartem) MobSignal() (map[string]mobSignal, error) {
-	ret := make(map[string]mobSignal)
+func (sd *deviceMartem) MobSignal() (map[string]MobSignal, error) {
+	ret := make(map[string]MobSignal)
 	oid := ".1.3.6.1.4.1.43098.2.4"
 	r, err := sd.getmulti(oid, nil)
 	if err != nil {
@@ -63,7 +63,7 @@ func (sd *deviceMartem) MobSignal() (map[string]mobSignal, error) {
 		ifIdx := parts[1]
 		out, ok := ret[ifIdx]
 		if !ok {
-			out = mobSignal{}
+			out = MobSignal{}
 		}
 
 		switch o {
@@ -86,7 +86,7 @@ func (sd *deviceMartem) MobSignal() (map[string]mobSignal, error) {
 			out.Imei.IsSet = true
 			out.Imei.String = strings.TrimSpace(d.OctetString)
 		case oid + ".8." + ifIdx:
-			v := sensorVal{
+			v := SensorVal{
 				Unit:    "level(0-4)",
 				Divisor: 1,
 				Value:   uint64(d.Integer),

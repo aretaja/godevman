@@ -448,144 +448,144 @@ func (d *device) Morph() interface{} {
 // Common types for unified device info
 
 // Common types for collected values
-type valBool struct {
+type ValBool struct {
 	Value bool
 	IsSet bool
 }
 
-type valF64 struct {
+type ValF64 struct {
 	Value float64
 	IsSet bool
 }
 
-type valInt struct {
+type ValInt struct {
 	Value int
 	IsSet bool
 }
 
-type valI64 struct {
+type ValI64 struct {
 	Value int64
 	IsSet bool
 }
 
-type valString struct {
+type ValString struct {
 	Value string
 	IsSet bool
 }
 
-type valU64 struct {
+type ValU64 struct {
 	Value uint64
 	IsSet bool
 }
 
 // System data
-type system struct {
-	Descr, ObjectID, Contact, Name, Location, UpTimeStr valString
-	UpTime                                              valU64
+type System struct {
+	Descr, ObjectID, Contact, Name, Location, UpTimeStr ValString
+	UpTime                                              ValU64
 }
 
 // Interface info
-type ifInfo struct {
-	Descr, Name, Alias, Mac, LastStr, TypeStr, AdminStr, OperStr valString
-	Type, Mtu, Admin, Oper                                       valI64
+type IfInfo struct {
+	Descr, Name, Alias, Mac, LastStr, TypeStr, AdminStr, OperStr ValString
+	Type, Mtu, Admin, Oper                                       ValI64
 	Speed, Last, InOctets, InPkts, InUcast, InMcast, InBcast, InDiscards,
 	InErrors, OutOctets, OutPkts, OutUcast, OutMcast, OutBcast, OutDiscards,
-	OutErrors valU64
+	OutErrors ValU64
 }
 
 // Interface stack info
-type ifStack struct {
+type IfStack struct {
 	Up, Down map[int][]int
 }
 
 // Inventory info
-type invInfo struct {
+type InvInfo struct {
 	Descr, Position, HwProduct, HwRev, Serial, Manufacturer, Model, SwProduct,
-	SwRev valString
+	SwRev ValString
 	Physical bool
-	ParentId valI64
+	ParentId ValI64
 }
 
 // Dot1Q VLAN bridgeport info
-type d1qVlanBrPort struct {
+type D1qVlanBrPort struct {
 	IfIdx int
 	UnTag bool
 }
 
 // Dot1Q VLAN info (Boolean in Ports map indicates untagged vlan)
-type d1qVlanInfo struct {
-	Ports map[int]*d1qVlanBrPort
+type D1qVlanInfo struct {
+	Ports map[int]*D1qVlanBrPort
 	Name  string
 }
 
 // IP info
-type ipInfo struct {
+type IpInfo struct {
 	Mask  string
 	IfIdx int64
 }
 
 // IP Interface info
-type ipIfInfo struct {
+type IpIfInfo struct {
 	Descr, Alias string
-	ipInfo
+	IpInfo
 }
 
 // last backup info
-type backupInfo struct {
+type BackupInfo struct {
 	TargetIP, TargetFile string
 	Timestamp, Progress  int
 	Success              bool
 }
 
 // Radiolink radio interface info
-type rfInfo struct {
-	Name       valString
-	Descr      valString
-	Status     valString
-	Mute       valBool
-	IfIdx      valInt
-	EntityIdx  valInt
-	TxCapacity valInt
-	PowerIn    valF64
-	PowerOut   valF64
-	Snr        valF64
+type RfInfo struct {
+	Name       ValString
+	Descr      ValString
+	Status     ValString
+	Mute       ValBool
+	IfIdx      ValInt
+	EntityIdx  ValInt
+	TxCapacity ValInt
+	PowerIn    ValF64
+	PowerOut   ValF64
+	Snr        ValF64
 }
 
-type rauInfo struct {
-	Rf        map[string]*rfInfo
-	Name      valString
-	Descr     valString
-	EntityIdx valInt
-	Temp      valF64
+type RauInfo struct {
+	Rf        map[string]*RfInfo
+	Name      ValString
+	Descr     ValString
+	EntityIdx ValInt
+	Temp      ValF64
 }
 
-type rlRadioIfInfo struct {
-	Rau       map[string]*rauInfo
-	Name      valString
-	Descr     valString
-	AdmStat   valString
-	OperStat  valString
-	IfIdx     valInt
-	EntityIdx valInt
-	Es        valInt
-	Uas       valInt
+type RlRadioIfInfo struct {
+	Rau       map[string]*RauInfo
+	Name      ValString
+	Descr     ValString
+	AdmStat   ValString
+	OperStat  ValString
+	IfIdx     ValInt
+	EntityIdx ValInt
+	Es        ValInt
+	Uas       ValInt
 }
 
 // Radiolink FarEnd radio interface info
-type rlRadioFeIfInfo struct {
-	SysName    valString
-	Ip         valString
-	FeIfDescr  valString
-	IfIdx      valInt
-	FeIfIdx    valInt
-	EntityIdx  valInt
-	TxCapacity valInt
-	PowerIn    valF64
-	PowerOut   valF64
+type RlRadioFeIfInfo struct {
+	SysName    ValString
+	Ip         ValString
+	FeIfDescr  ValString
+	IfIdx      ValInt
+	FeIfIdx    ValInt
+	EntityIdx  ValInt
+	TxCapacity ValInt
+	PowerIn    ValF64
+	PowerOut   ValF64
 }
 
 // Device sensor value
-type sensorVal struct {
+type SensorVal struct {
 	Unit, String string
 	Value        uint64
 	Divisor      int
@@ -594,70 +594,85 @@ type sensorVal struct {
 }
 
 // Onu info
-type onuPort struct {
-	Id, Speed, Mode valString
+type OnuPort struct {
+	Id, Speed, Mode ValString
 	Vlans           []int
-	Plugged         valBool
-	NativeVlan      valInt
+	Plugged         ValBool
+	NativeVlan      ValInt
 }
 
-type onuInfo struct {
-	Model      valString
-	Mac        valString
-	UpTimeStr  valString
-	ConTimeStr valString
-	Error      valString
-	Version    valString
-	OltPort    valString
-	Name       valString
-	Ports      map[string]onuPort
-	TxBytes    sensorVal
-	TxPower    sensorVal
-	RxPower    sensorVal
-	Ram        sensorVal
-	Distance   sensorVal
-	CpuTemp    sensorVal
-	CpuUsage   sensorVal
-	DownLimit  sensorVal
-	Uplimit    sensorVal
-	RxBytes    sensorVal
-	ConTime    valU64
-	UpTime     valU64
-	Online     valBool
-	Enabled    valBool
+type OnuInfo struct {
+	Model      ValString
+	Mac        ValString
+	UpTimeStr  ValString
+	ConTimeStr ValString
+	Error      ValString
+	Version    ValString
+	OltPort    ValString
+	Name       ValString
+	Ports      map[string]OnuPort
+	TxBytes    SensorVal
+	TxPower    SensorVal
+	RxPower    SensorVal
+	Ram        SensorVal
+	Distance   SensorVal
+	CpuTemp    SensorVal
+	CpuUsage   SensorVal
+	DownLimit  SensorVal
+	Uplimit    SensorVal
+	RxBytes    SensorVal
+	ConTime    ValU64
+	UpTime     ValU64
+	Online     ValBool
+	Enabled    ValBool
+}
+
+// Phase Sync info
+type PhaseSyncInfo struct {
+	SrcsRole      map[string]string
+	ParentGmIdent ValString
+	State         ValString
+	HopsToGm      ValU64
+}
+
+// Frequency Sync info
+type FreqSyncInfo struct {
+	SrcsQaLevel  map[string]string
+	ClockMode    ValString
+	ClockQaLevel ValString
 }
 
 // Mobile modem signal data
-type mobSignal struct {
-	Registration, Technology, Band, Operator, Ber, CellId, Signal, SignalBars, Imei, Sinr, Rssi, Rsrp, Rsrq sensorVal
+type MobSignal struct {
+	Registration, Technology, Band, Operator, Ber, CellId, Signal, SignalBars, Imei, Sinr, Rssi, Rsrp, Rsrq SensorVal
 }
 
 // Energy Readings
-type eReadings struct {
-	day, night sensorVal
+type EReadings struct {
+	day, night SensorVal
 	timeStamp  uint
 }
 
 // Power Generator info
-type genInfo struct {
-	GenMode      valString
-	BreakerState valString
-	EngineState  valString
-	CoolantTemp  sensorVal
-	RunHours     sensorVal
-	BatteryVolt  sensorVal
-	GenFreq      sensorVal
-	GenCurrentL1 sensorVal
-	GenCurrentL2 sensorVal
-	GenCurrentL3 sensorVal
-	GenPower     sensorVal
-	MainsVoltL3  sensorVal
-	MainsVoltL2  sensorVal
-	NumStarts    valU64
-	FuelConsum   sensorVal
-	MainsVoltL1  sensorVal
-	FuelLevel    sensorVal
-	GenVoltL3    sensorVal
-	GenVoltL2    sensorVal
-	GenVoltL1    sensorVal
+type GenInfo struct {
+	GenMode      ValString
+	BreakerState ValString
+	EngineState  ValString
+	GenPower     SensorVal
+	RunHours     SensorVal
+	BatteryVolt  SensorVal
+	GenFreq      SensorVal
+	GenCurrentL1 SensorVal
+	GenCurrentL2 SensorVal
+	GenCurrentL3 SensorVal
+	CoolantTemp  SensorVal
+	MainsVoltL3  SensorVal
+	MainsVoltL2  SensorVal
+	GenVoltL2    SensorVal
+	FuelConsum   SensorVal
+	MainsVoltL1  SensorVal
+	FuelLevel    SensorVal
+	GenVoltL3    SensorVal
+	GenVoltL1    SensorVal
+	NumStarts    ValU64
 }

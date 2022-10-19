@@ -217,9 +217,9 @@ func (sd *deviceViolaNoSNMP) SysInfo() (map[string]string, error) {
 
 // Get info from web
 // Valid targets values: "All", "Descr", "ObjectID"
-func (sd *deviceViolaNoSNMP) System(targets []string) (system, error) {
-	results := func(t []string, i map[string]string) system {
-		out := new(system)
+func (sd *deviceViolaNoSNMP) System(targets []string) (System, error) {
+	results := func(t []string, i map[string]string) System {
+		out := new(System)
 		for _, t := range targets {
 			if t == "All" || t == "ObjectID" {
 				out.ObjectID.Value = "no-snmp-viola"
@@ -244,7 +244,7 @@ func (sd *deviceViolaNoSNMP) System(targets []string) (system, error) {
 
 	info, err := sd.SysInfo()
 	if err != nil {
-		return system{}, fmt.Errorf("errors: SysInfo - %s", err)
+		return System{}, fmt.Errorf("errors: SysInfo - %s", err)
 	}
 
 	return results(targets, info), nil

@@ -14,8 +14,8 @@ type deviceComap struct {
 // .iso.org.dod.internet.private.enterprises.enterprises-28634.il-14.groupRdCfg tree
 // Replaces common snmp method
 // Valid targets values: "All", "Descr", "ObjectID", "UpTime", "Contact", "Name", "Location"
-func (sd *deviceComap) System(targets []string) (system, error) {
-	var out system
+func (sd *deviceComap) System(targets []string) (System, error) {
+	var out System
 	oids := map[string]string{
 		"descr":    ".1.3.6.1.2.1.1.1.0",
 		"objectID": ".1.3.6.1.2.1.1.2.0",
@@ -85,8 +85,8 @@ func (sd *deviceComap) System(targets []string) (system, error) {
 
 // Get info from .iso.org.dod.internet.private.enterprises.enterprises-28634.il-14.groupRdCfg tree
 // Valid targets values: "All", "Electrical", "Engine", "Common"
-func (sd *deviceComap) GeneratorInfo(targets []string) (genInfo, error) {
-	out := genInfo{}
+func (sd *deviceComap) GeneratorInfo(targets []string) (GenInfo, error) {
+	out := GenInfo{}
 	oid := ".1.3.6.1.4.1.28634.14.2"
 	idxs := map[string]string{
 		"genVoltL1":    "8192.0",
