@@ -345,7 +345,7 @@ func (sd *snmpCommon) IfStack() (IfStack, error) {
 	oid := ".1.3.6.1.2.1.31.1.2.1.3"
 
 	r, err := sd.snmpSession.Walk(oid, true, true)
-	if err != nil && sd.handleErr(oid, err) {
+	if err != nil && sd.handleErr(err) {
 		return out, err
 	}
 
@@ -380,7 +380,7 @@ func (sd *snmpCommon) IfStack() (IfStack, error) {
 
 // Get info from .iso.org.dod.internet.mgmt.mib-2.entityMIB.entityMIBObjects.entityPhysical.entPhysicalTable
 // Valid targets values: "All", "Descr", "Position", "HwProduct", "HwRev", "Serial", "Manufacturer",
-//"Model", "SwProduct", "SwRev", "ParentId"
+// "Model", "SwProduct", "SwRev", "ParentId"
 func (sd *snmpCommon) InvInfo(targets []string, idx ...string) (map[string]*InvInfo, error) {
 	out := make(map[string]*InvInfo)
 	invTable := ".1.3.6.1.2.1.47.1.1.1.1."
@@ -513,7 +513,7 @@ func (sd *snmpCommon) IfInventory() (map[int]int, error) {
 	oid := ".1.3.6.1.2.1.47.1.3.2.1.2"
 
 	r, err := sd.snmpSession.Walk(oid, true, true)
-	if err != nil && sd.handleErr(oid, err) {
+	if err != nil && sd.handleErr(err) {
 		return out, err
 	}
 
@@ -540,7 +540,7 @@ func (sd *snmpCommon) BrPort2IfIdx() (map[string]int, error) {
 	oid := ".1.3.6.1.2.1.17.1.4.1.2"
 
 	r, err := sd.snmpSession.Walk(oid, true, true)
-	if err != nil && sd.handleErr(oid, err) {
+	if err != nil && sd.handleErr(err) {
 		return out, err
 	}
 
@@ -559,7 +559,7 @@ func (sd *snmpCommon) D1qVlans() (map[string]string, error) {
 	oid := ".1.3.6.1.2.1.17.7.1.4.3.1.1"
 
 	r, err := sd.snmpSession.Walk(oid, true, true)
-	if err != nil && sd.handleErr(oid, err) {
+	if err != nil && sd.handleErr(err) {
 		return out, err
 	}
 
@@ -595,7 +595,7 @@ func (sd *snmpCommon) D1qVlanInfo() (map[string]*D1qVlanInfo, error) {
 			if i == 0 {
 				continue
 			}
-			if sd.handleErr(mOid, err) {
+			if sd.handleErr(err) {
 				return out, fmt.Errorf("%s - %s", mOid, err)
 			}
 		}
@@ -632,7 +632,7 @@ func (sd *snmpCommon) D1qVlanInfo() (map[string]*D1qVlanInfo, error) {
 		if err != nil {
 			if i == 0 {
 				continue
-			} else if sd.handleErr(uOid, err) {
+			} else if sd.handleErr(err) {
 				return out, err
 			}
 		}
@@ -765,7 +765,7 @@ func (sd *snmpCommon) OspfAreaRouters() (map[string][]string, error) {
 	oid := ".1.3.6.1.2.1.14.4.1.1"
 
 	r, err := sd.snmpSession.Walk(oid, true, true)
-	if err != nil && sd.handleErr(oid, err) {
+	if err != nil && sd.handleErr(err) {
 		return out, err
 	}
 
@@ -789,7 +789,7 @@ func (sd *snmpCommon) OspfAreaStatus() (map[string]string, error) {
 
 	oid := ".1.3.6.1.2.1.14.2.1.10"
 	r, err := sd.snmpSession.Walk(oid, true, true)
-	if err != nil && sd.handleErr(oid, err) {
+	if err != nil && sd.handleErr(err) {
 		return out, err
 	}
 
@@ -821,7 +821,7 @@ func (sd *snmpCommon) OspfNbrStatus() (map[string]string, error) {
 
 	oid := ".1.3.6.1.2.1.14.10.1.6"
 	r, err := sd.snmpSession.Walk(oid, true, true)
-	if err != nil && sd.handleErr(oid, err) {
+	if err != nil && sd.handleErr(err) {
 		return out, err
 	}
 

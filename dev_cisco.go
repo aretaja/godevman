@@ -3,6 +3,7 @@ package godevman
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/aretaja/snmphelper"
 )
@@ -35,9 +36,10 @@ func (sd *deviceCisco) SwVersion() (string, error) {
 // Get Phase sync info
 func (sd *deviceCisco) PhaseSyncInfo() (*PhaseSyncInfo, error) {
 	var gbaseoids = map[string]string{
-		"parentGm": ".1.3.6.1.4.1.9.9.760.1.2.2.1.8",
-		"state":    ".1.3.6.1.4.1.9.9.760.1.2.4.1.4",
-		"hops":     ".1.3.6.1.4.1.9.9.760.1.2.1.1.4",
+		"parentGm":      ".1.3.6.1.4.1.9.9.760.1.2.2.1.8",
+		"parentGmClass": ".1.3.6.1.4.1.9.9.760.1.2.2.1.11",
+		"state":         ".1.3.6.1.4.1.9.9.760.1.2.4.1.4",
+		"hops":          ".1.3.6.1.4.1.9.9.760.1.2.1.1.4",
 	}
 
 	var wbaseoids = map[string]string{
@@ -64,16 +66,27 @@ func (sd *deviceCisco) PhaseSyncInfo() (*PhaseSyncInfo, error) {
 		8: "uncalibrated",
 		9: "slave",
 	}
+
+	// Actually in device output there can be values from 0-255. Only 6 and 7 making sense currently
+	var parentGmClckQa = map[uint64]string{
+		6: "prtcLock(6)",
+		7: "holdover(7)",
+	}
+
 	var out = new(PhaseSyncInfo)
 	r, err := sd.snmpSession.Walk(gbaseoids["hops"], true, true)
-	if err != nil && sd.handleErr(gbaseoids["hops"], err) {
+	if err != nil {
+		errStr := err.Error()
+		if strings.HasSuffix(errStr, "NoSuchName") ||
+			strings.HasSuffix(errStr, "no results") {
+			return out, fmt.Errorf("not configured")
+		}
+
 		return out, err
 	}
 
 	if len(r) > 1 {
 		return out, fmt.Errorf("multiple indexes not supported")
-	} else if len(r) == 0 {
-		return out, fmt.Errorf("no indexes found")
 	}
 
 	var idx string
@@ -103,28 +116,39 @@ func (sd *deviceCisco) PhaseSyncInfo() (*PhaseSyncInfo, error) {
 	}
 
 	for o, res := range r {
-		if n[o] == "parentGm" && res.Vtype == "OctetString" {
+		switch {
+		case n[o] == "parentGm" && res.Vtype == "OctetString":
 			out.ParentGmIdent = ValString{
 				Value: res.OctetString,
 				IsSet: true,
 			}
-		} else if n[o] == "state" && res.Vtype == "Integer" {
+		case n[o] == "state" && res.Vtype == "Integer":
 			if value, ok := clockStateType[res.Integer]; ok {
 				out.State = ValString{
 					Value: value,
 					IsSet: true,
 				}
 			}
+		case n[o] == "parentGmClass" && res.Vtype == "Gauge32":
+			out.ParentGmClass = ValString{
+				Value: fmt.Sprintf("unkn(%d)", res.Gauge32),
+				IsSet: true,
+			}
+			if value, ok := parentGmClckQa[res.Gauge32]; ok {
+				out.ParentGmClass.Value = value
+			}
+		default:
+			continue
 		}
 	}
 
 	sNames, err := sd.snmpSession.Walk(wbaseoids["pNames"]+"."+idx, true, true)
-	if err != nil && sd.handleErr(wbaseoids["pNames"]+"."+idx, err) {
+	if err != nil && sd.handleErr(err) {
 		return out, err
 	}
 
 	pStates, err := sd.snmpSession.Walk(wbaseoids["pStates"]+"."+idx, true, true)
-	if err != nil && sd.handleErr(wbaseoids["pStates"]+"."+idx, err) {
+	if err != nil && sd.handleErr(err) {
 		return out, err
 	}
 
@@ -202,7 +226,13 @@ func (sd *deviceCisco) FreqSyncInfo() (*FreqSyncInfo, error) {
 	var res = make(map[string]snmphelper.SnmpOut)
 	for name, o := range baseoids {
 		r, err := sd.snmpSession.Walk(o, true, true)
-		if err != nil && sd.handleErr(o, err) {
+		if err != nil {
+			errStr := err.Error()
+			if strings.HasSuffix(errStr, "NoSuchName") ||
+				strings.HasSuffix(errStr, "no results") {
+				return out, fmt.Errorf("not configured")
+			}
+
 			return out, err
 		}
 		res[name] = r

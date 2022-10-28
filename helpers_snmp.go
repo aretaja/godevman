@@ -56,7 +56,7 @@ func (sd *snmpCommon) getmulti(oid string, idx []string) (snmphelper.SnmpOut, er
 	}
 
 	res, err := sd.snmpSession.Walk(oid, true, false)
-	if err != nil && sd.handleErr(oid, err) {
+	if err != nil && sd.handleErr(err) {
 		return nil, err
 	}
 
@@ -64,7 +64,7 @@ func (sd *snmpCommon) getmulti(oid string, idx []string) (snmphelper.SnmpOut, er
 }
 
 // Handle snmpwalk errors
-func (sd *snmpCommon) handleErr(oid string, err error) bool {
+func (sd *snmpCommon) handleErr(err error) bool {
 	errStr := err.Error()
 
 	if strings.HasSuffix(errStr, "NoSuchName") ||

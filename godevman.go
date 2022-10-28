@@ -631,6 +631,7 @@ type OnuInfo struct {
 type PhaseSyncInfo struct {
 	SrcsState     map[string]string
 	ParentGmIdent ValString
+	ParentGmClass ValString
 	State         ValString
 	HopsToGm      ValU64
 }

@@ -26,13 +26,13 @@ func (sd *deviceEricssonMlTn) SwVersion() (string, error) {
 	// get installed sw states
 	oid := ".1.3.6.1.4.1.193.81.2.7.1.3.0"
 	r, err := sd.getone(oid)
-	if err != nil && sd.handleErr(oid, err) {
+	if err != nil && sd.handleErr(err) {
 		return "", err
 	}
 
 	oid = ".1.3.6.1.4.1.193.81.2.7.1.2.1.3." + fmt.Sprintf("%d", r[oid].Integer)
 	r, err = sd.getone(oid)
-	if err != nil && sd.handleErr(oid, err) {
+	if err != nil && sd.handleErr(err) {
 		return "", err
 	}
 

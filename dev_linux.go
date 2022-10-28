@@ -15,7 +15,7 @@ func (sd *deviceLinux) SwVersion() (string, error) {
 	// find index for kernel uname if any (must be configured in device snmpd.conf)
 	oid := ".1.3.6.1.4.1.8072.1.3.2.2.1.2"
 	r, err := sd.snmpSession.Walk(oid, true, true)
-	if err != nil && sd.handleErr(oid, err) {
+	if err != nil && sd.handleErr(err) {
 		return "", err
 	}
 
@@ -31,14 +31,14 @@ func (sd *deviceLinux) SwVersion() (string, error) {
 	if len(token) != 0 {
 		oid = ".1.3.6.1.4.1.8072.1.3.2.3.1.4." + token
 		r, err = sd.getone(oid)
-		if err != nil && sd.handleErr(oid, err) {
+		if err != nil && sd.handleErr(err) {
 			return version, err
 		}
 
 		if r[oid].Vtype == "Integer" && r[oid].Integer == 0 {
 			oid = ".1.3.6.1.4.1.8072.1.3.2.3.1.1." + token
 			r, err = sd.getone(oid)
-			if err != nil && sd.handleErr(oid, err) {
+			if err != nil && sd.handleErr(err) {
 				return version, err
 			}
 

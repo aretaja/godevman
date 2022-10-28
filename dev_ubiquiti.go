@@ -310,7 +310,7 @@ func (sd *deviceUbiquiti) IfNumber() (int64, error) {
 	var out int64
 	oid := ".1.3.6.1.4.1.41112.1.5.7.2.1.1"
 	r, err := sd.snmpSession.Walk(oid, true, true)
-	if err != nil && sd.handleErr(oid, err) {
+	if err != nil && sd.handleErr(err) {
 		return out, err
 	}
 
@@ -788,7 +788,7 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*I
 
 	if rSrc["descr"] {
 		r, err := sd.snmpSession.Walk(descrOid, true, true)
-		if err != nil && sd.handleErr(descrOid, err) {
+		if err != nil && sd.handleErr(err) {
 			return out, err
 		}
 
@@ -805,7 +805,7 @@ func (sd *deviceUbiquiti) IfInfo(targets []string, idx ...string) (map[string]*I
 
 	if rSrc["oper"] {
 		r, err := sd.snmpSession.Walk(operOid, true, true)
-		if err != nil && sd.handleErr(operOid, err) {
+		if err != nil && sd.handleErr(err) {
 			return out, err
 		}
 
