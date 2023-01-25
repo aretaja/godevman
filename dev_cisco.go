@@ -284,6 +284,55 @@ func (sd *deviceCisco) FreqSyncInfo() (*FreqSyncInfo, error) {
 	return out, nil
 }
 
+// Get SMART License status info
+func (sd *deviceCisco) LicStatusInfo() (*LicStatusInfo, error) {
+	var oids = map[string]string{
+		"enabled":   ".1.3.6.1.4.1.9.9.831.0.4.0",
+		"expires":   ".1.3.6.1.4.1.9.9.831.0.7.1.0",
+		"status":    ".1.3.6.1.4.1.9.9.831.0.7.2.0",
+		"renewLeft": ".1.3.6.1.4.1.9.9.831.0.7.4.3.0",
+	}
+
+	var out = new(LicStatusInfo)
+
+	r, err := sd.getone(oids["enabled"])
+	if err != nil {
+		return out, err
+	}
+
+	switch {
+	case r[oids["enabled"]].Integer == 1:
+		out.Enabled.IsSet = true
+		out.Enabled.Value = true
+	case r[oids["enabled"]].Integer == 2:
+		out.Enabled.IsSet = true
+		return out, nil
+	default:
+		return out, fmt.Errorf("unknown smart licensing mode status")
+	}
+
+	r, err = sd.snmpSession.Get([]string{oids["expires"], oids["status"], oids["renewLeft"]})
+	if err != nil {
+		return out, err
+	}
+
+	for o, d := range r {
+		switch o {
+		case oids["expires"]:
+			out.Expires.Value = uint64(d.Integer)
+			out.Expires.IsSet = true
+		case oids["status"]:
+			out.StatusStr.Value = d.OctetString
+			out.StatusStr.IsSet = true
+		case oids["renewLeft"]:
+			out.RenewLeft.Value = uint64(d.Integer)
+			out.RenewLeft.IsSet = true
+		}
+	}
+
+	return out, nil
+}
+
 // Prepare CLI session parameters
 func (sd *deviceCisco) cliPrepare() (*CliParams, error) {
 	defParams, err := sd.snmpCommon.cliPrepare()

@@ -643,6 +643,14 @@ type FreqSyncInfo struct {
 	ClockQaLevel ValString
 }
 
+// License Status info
+type LicStatusInfo struct {
+	StatusStr ValString
+	Enabled   ValBool
+	Expires   ValU64
+	RenewLeft ValU64
+}
+
 // Mobile modem signal data
 type MobSignal struct {
 	Registration, Technology, Band, Operator, Ber, CellId, Signal, SignalBars, Imei, Sinr, Rssi, Rsrp, Rsrq SensorVal
