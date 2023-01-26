@@ -18,7 +18,7 @@ import (
 )
 
 // Version of release
-const Version = "0.0.1-devel.1"
+const Version = "0.0.1-devel.2"
 
 const time_iso8601_sec = "2006-01-02T15:04:05"
 
@@ -641,6 +641,14 @@ type FreqSyncInfo struct {
 	SrcsQaLevel  map[string]string
 	ClockMode    ValString
 	ClockQaLevel ValString
+}
+
+// License Status info
+type LicStatusInfo struct {
+	StatusStr ValString
+	Enabled   ValBool
+	Expires   ValU64
+	RenewLeft ValU64
 }
 
 // Mobile modem signal data

@@ -118,6 +118,11 @@ type DevFreqSyncReader interface {
 	FreqSyncInfo() (*FreqSyncInfo, error)
 }
 
+// Get License status info
+type DevLicStatusReader interface {
+	LicStatusInfo() (*LicStatusInfo, error)
+}
+
 // Get Power Generator info
 type DevGenReader interface {
 	GeneratorInfo([]string) (GenInfo, error)
