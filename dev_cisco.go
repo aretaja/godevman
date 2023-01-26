@@ -297,6 +297,9 @@ func (sd *deviceCisco) LicStatusInfo() (*LicStatusInfo, error) {
 
 	r, err := sd.getone(oids["enabled"])
 	if err != nil {
+		if strings.HasSuffix(err.Error(), "NoSuchObject") {
+			return out, fmt.Errorf("no smart licensing mode data")
+		}
 		return out, err
 	}
 
