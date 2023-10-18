@@ -314,7 +314,8 @@ func (d *device) Morph() interface{} {
 				snmpCommon{*d},
 			}
 			res = &md
-		case d.sysObjectId == ".1.3.6.1.4.1.28634.14":
+		case d.sysObjectId == ".1.3.6.1.4.1.28634.14" ||
+			d.sysObjectId == ".1.3.6.1.4.1.28634.30":
 			md := deviceComap{
 				snmpCommon{*d},
 			}
