@@ -18,7 +18,7 @@ import (
 )
 
 // Version of release
-const Version = "0.0.1-devel.2"
+const Version = "0.0.1-devel.3"
 
 const time_iso8601_sec = "2006-01-02T15:04:05"
 
