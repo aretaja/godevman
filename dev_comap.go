@@ -15,13 +15,19 @@ type deviceComap struct {
 // Replaces common snmp method
 // Valid targets values: "All", "Descr", "ObjectID", "UpTime", "Contact", "Name", "Location"
 func (sd *deviceComap) System(targets []string) (System, error) {
+	// For il-14 actual sysname is found under private oid
+	so := ".1.3.6.1.2.1.1.5.0"
+	if sd.sysObjectId == ".1.3.6.1.4.1.28634.14" {
+		so = ".1.3.6.1.4.1.28634.14.4.8637.0"
+	}
+
 	var out System
 	oids := map[string]string{
 		"descr":    ".1.3.6.1.2.1.1.1.0",
 		"objectID": ".1.3.6.1.2.1.1.2.0",
 		"upTime":   ".1.3.6.1.2.1.1.3.0",
 		"contact":  ".1.3.6.1.2.1.1.4.0",
-		"name":     ".1.3.6.1.4.1.28634.14.4.8637.0",
+		"name":     so,
 		"location": ".1.3.6.1.2.1.1.6.0",
 	}
 
@@ -86,8 +92,13 @@ func (sd *deviceComap) System(targets []string) (System, error) {
 // Get info from .iso.org.dod.internet.private.enterprises.enterprises-28634.il-14.groupRdCfg tree
 // Valid targets values: "All", "Electrical", "Engine", "Common"
 func (sd *deviceComap) GeneratorInfo(targets []string) (GenInfo, error) {
+	// Some oids differ on il-14 and il4-30
+	co := "9152.0"
+	if sd.sysObjectId == ".1.3.6.1.4.1.28634.14" {
+		co = "9151.0"
+	}
 	out := GenInfo{}
-	oid := ".1.3.6.1.4.1.28634.14.2"
+	oid := sd.sysObjectId + ".2"
 	idxs := map[string]string{
 		"genVoltL1":    "8192.0",
 		"genVoltL2":    "8193.0",
@@ -105,7 +116,7 @@ func (sd *deviceComap) GeneratorInfo(targets []string) (GenInfo, error) {
 		"batteryVolt":  "8213.0",
 		"fuelLevel":    "9153.0",
 		"fuelConsum":   "9040.0",
-		"coolantTemp":  "9151.0",
+		"coolantTemp":  co,
 		"engineState":  "9244.0",
 		"breakerState": "9245.0",
 		"genMode":      "9887.0",
@@ -123,9 +134,17 @@ func (sd *deviceComap) GeneratorInfo(targets []string) (GenInfo, error) {
 			continue
 		case "Electrical":
 			rIdxs = []string{
-				idxs["genVoltL1"], idxs["genVoltL2"], idxs["genVoltL3"], idxs["mainsVoltL1"],
-				idxs["mainsVoltL2"], idxs["mainsVoltL3"], idxs["genCurrentL1"], idxs["genCurrentL2"],
+				idxs["genVoltL1"], idxs["genVoltL2"], idxs["genVoltL3"], idxs["genCurrentL1"], idxs["genCurrentL2"],
 				idxs["genCurrentL3"], idxs["genPower"], idxs["genFreq"],
+			}
+			// Only il-14 has mains volt
+			if sd.sysObjectId == ".1.3.6.1.4.1.28634.14" {
+				mvo := []string{idxs["mainsVoltL1"], idxs["mainsVoltL2"], idxs["mainsVoltL3"]}
+				rIdxs = append(rIdxs, mvo...)
+			} else {
+				out.MainsVoltL1.Unit = "NotSupported"
+				out.MainsVoltL2.Unit = "NotSupported"
+				out.MainsVoltL3.Unit = "NotSupported"
 			}
 		case "Engine":
 			rIdxs = []string{
@@ -133,7 +152,7 @@ func (sd *deviceComap) GeneratorInfo(targets []string) (GenInfo, error) {
 				idxs["fuelConsum"], idxs["coolantTemp"],
 			}
 		case "Common":
-			rIdxs = []string{idxs["engineState"], idxs["breakerState"], idxs["genMode"]}
+			rIdxs = []string{idxs["genMode"], idxs["engineState"], idxs["breakerState"]}
 		default:
 			return out, fmt.Errorf("unknown target: %s", t)
 		}
